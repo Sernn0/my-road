@@ -358,10 +358,19 @@ function formatPace(secPerKm: number): string {
 }
 
 // 나침반: 지도가 가는 방향으로 돌아가므로, 북쪽(N) 글자도 함께 돌아 실제 북쪽을 가리킨다. 가운데 화살표는 내가 가는 방향(위).
+// 방향이 359도 → 1도처럼 0도를 넘을 때 한 바퀴 거꾸로 돌지 않도록, 늘 가까운 쪽으로만 돌린다. (지도도 가까운 쪽으로 돈다)
 function Compass({ heading }: { heading: number }) {
+  const dialRef = useRef<SVGSVGElement>(null);
+  const turned = useRef(0); // 지금까지 돌린 각도 (360을 넘어 누적)
+  useEffect(() => {
+    const delta = ((((-heading - turned.current) % 360) + 540) % 360) - 180; // -180 ~ 180도 사이의 가까운 차이
+    turned.current += delta;
+    if (dialRef.current) dialRef.current.style.transform = `rotate(${turned.current}deg)`;
+  }, [heading]);
+
   return (
     <div className="relative h-14 w-14 rounded-full bg-white shadow-lg ring-1 ring-black/5" aria-label={`나침반, 진행 방향 ${Math.round(heading)}도`} role="img">
-      <svg viewBox="0 0 56 56" className="absolute inset-0 transition-transform duration-700 ease-out" style={{ transform: `rotate(${-heading}deg)` }} aria-hidden="true">
+      <svg ref={dialRef} viewBox="0 0 56 56" className="absolute inset-0 transition-transform duration-700 ease-out" aria-hidden="true">
         <circle cx="28" cy="28" r="24" fill="none" stroke="#E5EFEA" strokeWidth="2" />
         {[0, 90, 180, 270].map((d) => (
           <line key={d} x1="28" y1="5" x2="28" y2="9" stroke="#9DB8AA" strokeWidth="2" transform={`rotate(${d} 28 28)`} />
