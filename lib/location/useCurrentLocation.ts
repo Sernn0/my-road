@@ -28,9 +28,10 @@ const DEMO_POSITION: CurrentLocation = { lat: 36.3667, lng: 127.389, accuracy: 1
 function readPosition(
   onOk: (position: CurrentLocation) => void,
   onFail: (status: LocationStatus) => void,
+  demoPosition: CurrentLocation,
 ) {
   if (IS_DEMO) {
-    Promise.resolve().then(() => onOk(DEMO_POSITION));
+    Promise.resolve().then(() => onOk(demoPosition));
     return;
   }
   if (!("geolocation" in navigator)) {
@@ -52,7 +53,8 @@ function readPosition(
   );
 }
 
-export function useCurrentLocation() {
+// demoPosition: 시연 모드에서 쓸 가짜 위치 (기본은 한밭수목원 근처). 실제 모드에서는 쓰이지 않는다.
+export function useCurrentLocation(demoPosition: CurrentLocation = DEMO_POSITION) {
   const [state, setState] = useState<State>({ status: "asking", position: null });
 
   // 화면이 열리면 위치 권한을 요청하고 현재 위치를 읽는다
@@ -61,10 +63,12 @@ export function useCurrentLocation() {
     readPosition(
       (position) => active && setState({ status: "granted", position }),
       (status) => active && setState({ status, position: null }),
+      demoPosition,
     );
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 화면이 열릴 때 한 번만 읽는다
   }, []);
 
   // 실패했을 때 "다시 시도"에서 쓴다
@@ -73,8 +77,9 @@ export function useCurrentLocation() {
     readPosition(
       (position) => setState({ status: "granted", position }),
       (status) => setState({ status, position: null }),
+      demoPosition,
     );
-  }, []);
+  }, [demoPosition]);
 
   return { ...state, isDemo: IS_DEMO, retry };
 }

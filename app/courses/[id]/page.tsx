@@ -6,7 +6,7 @@ import WeatherCard from "@/components/WeatherCard";
 import { getCourse } from "@/lib/courses/queries";
 import { formatDistanceKm } from "@/lib/format";
 
-// 출발 전 확인 화면 (DESIGN.md 2번 `/courses/[id]`). 경로 지도·거리·날씨. (한 화면 구성 다듬기는 PLAN 9번, 운동 시작은 10번)
+// 출발 전 확인 화면 (DESIGN.md 2번 `/courses/[id]`). 경로 지도·거리·날씨. (한 화면 구성 다듬기는 PLAN 9번, 운동 시작 버튼은 10번)
 async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["params"] }) {
   const { id } = await params;
   const course = await getCourse(id);
@@ -40,6 +40,16 @@ async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["pa
           </Suspense>
         </section>
       </main>
+
+      {/* 시작점에 도착한 뒤 누르는 버튼. 누르면 시간 기록이 시작된다 */}
+      <div className="sticky bottom-0 bg-background px-4 pb-6 pt-3">
+        <Link
+          href={`/courses/${course.id}/run`}
+          className="flex h-14 w-full items-center justify-center rounded-2xl bg-emerald-600 text-lg font-semibold text-white active:bg-emerald-700"
+        >
+          운동 시작
+        </Link>
+      </div>
     </>
   );
 }
