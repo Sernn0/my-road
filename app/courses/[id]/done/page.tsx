@@ -1,24 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import ShareImageButton from "@/components/ShareImageButton";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getCompletion } from "@/lib/completions/queries";
 import { levelInfo } from "@/lib/progress/level";
 import { effectiveStreak, kstDate } from "@/lib/progress/streak";
-import { formatDistanceKm } from "@/lib/format";
-
-function formatDuration(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
-}
-
-// 한국 시간 기준 날짜
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "long", day: "numeric" }).format(new Date(iso));
-}
+import { formatDate, formatDistanceKm, formatDuration } from "@/lib/format";
 
 // 완주 화면 (DESIGN.md 2번 `/courses/[id]/done?completion=번호`): 코스, 날짜, 소요 시간, 거리
 async function DoneScreen({ searchParams }: { searchParams: PageProps<"/courses/[id]/done">["searchParams"] }) {
@@ -72,6 +60,8 @@ async function DoneScreen({ searchParams }: { searchParams: PageProps<"/courses/
           {sectionUp && <p className="mt-2 font-semibold text-emerald-600">구간이 올랐어요!</p>}
         </section>
       )}
+
+      <ShareImageButton completionId={summary.id} courseName={summary.courseName} />
 
       <Link href="/" className="flex h-14 w-full items-center justify-center rounded-2xl bg-emerald-600 text-lg font-semibold text-white active:bg-emerald-700">
         코스 목록으로
