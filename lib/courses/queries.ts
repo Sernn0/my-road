@@ -16,3 +16,31 @@ export async function listCourses(): Promise<Course[]> {
     distanceKm: Number(row.distance_km),
   }));
 }
+
+export type CourseDetail = Course & {
+  path: [number, number][]; // [위도, 경도] 점 목록
+  startLat: number;
+  startLng: number;
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// 코스 한 개 (경로 포함). 없거나 번호 형식이 틀리면 null.
+export async function getCourse(id: string): Promise<CourseDetail | null> {
+  if (!UUID.test(id)) return null;
+  const { data, error } = await createServerSupabase()
+    .from("courses")
+    .select("id, name, distance_km, path, start_lat, start_lng")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error("코스를 불러오지 못했습니다");
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    distanceKm: Number(data.distance_km),
+    path: data.path as [number, number][],
+    startLat: data.start_lat as number,
+    startLng: data.start_lng as number,
+  };
+}
