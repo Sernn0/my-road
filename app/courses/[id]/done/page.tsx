@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { getCompletion } from "@/lib/completions/queries";
+import { levelInfo } from "@/lib/progress/level";
+import { effectiveStreak, kstDate } from "@/lib/progress/streak";
 import { formatDistanceKm } from "@/lib/format";
 
 function formatDuration(sec: number): string {
@@ -30,6 +33,14 @@ async function DoneScreen({ searchParams }: { searchParams: PageProps<"/courses/
     ["거리", formatDistanceKm(summary.distanceKm)],
   ];
 
+  // 경험치·레벨·연속 달성 (nice, 더미 데이터). 이번 완주 직전과 직후의 레벨을 비교해 오르면 알린다.
+  const user = await getCurrentUser();
+  const after = user ? levelInfo(user.totalXp) : null;
+  const before = user ? levelInfo(Math.max(0, user.totalXp - summary.xp)) : null;
+  const leveledUp = !!(before && after && before.level < after.level);
+  const sectionUp = !!(before && after && !leveledUp && (before.section < after.section || (!before.maxed && after.maxed)));
+  const streak = user ? effectiveStreak(user, kstDate()) : 0;
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 text-center">
       <p className="text-4xl">🎉</p>
@@ -42,6 +53,26 @@ async function DoneScreen({ searchParams }: { searchParams: PageProps<"/courses/
           </div>
         ))}
       </dl>
+
+      {user && after && (
+        <section aria-label="이번 완주의 보상" className="w-full rounded-2xl border border-black/10 px-4 py-4 text-left dark:border-white/15">
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm text-foreground/60">경험치</span>
+            <span className="text-xl font-bold text-emerald-600" data-testid="gained-xp">
+              +{summary.xp}점
+            </span>
+          </div>
+          {summary.xp === 0 && (
+            <p className="mt-1 text-sm text-foreground/60">오늘 이미 완주한 코스라 경험치는 없어요. (같은 코스는 하루 1회만 인정)</p>
+          )}
+          <p className="mt-2 text-sm text-foreground/70" data-testid="level-line">
+            {after.title} {after.maxed ? "· 최고 레벨" : `${after.section}/${after.sectionCount}`} · 연속 {streak}일
+          </p>
+          {leveledUp && <p className="mt-2 font-semibold text-emerald-600">레벨 업! {after.title}이(가) 되었어요 🎉</p>}
+          {sectionUp && <p className="mt-2 font-semibold text-emerald-600">구간이 올랐어요!</p>}
+        </section>
+      )}
+
       <Link href="/" className="flex h-14 w-full items-center justify-center rounded-2xl bg-emerald-600 text-lg font-semibold text-white active:bg-emerald-700">
         코스 목록으로
       </Link>

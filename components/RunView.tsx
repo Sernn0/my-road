@@ -104,10 +104,12 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
 
   // 완주 요약 저장 (PLAN 16번): 코스·소요 시간만 보낸다
   const acceptedKey = outcome.kind === "accepted" ? `${outcome.durationSec}-${outcome.attempt}` : null;
+  // 같은 완주를 두 번 저장하지 않도록, 보낸 키를 기억해 둔다 (개발 모드는 효과를 두 번 실행한다)
+  const sentKey = useRef<string | null>(null);
   useEffect(() => {
-    if (!acceptedKey) return;
+    if (!acceptedKey || sentKey.current === acceptedKey) return;
+    sentKey.current = acceptedKey;
     const [durationSec] = acceptedKey.split("-").map(Number);
-    let active = true;
     fetch("/api/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -115,7 +117,6 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
     })
       .then(async (res) => {
         const json = await res.json();
-        if (!active) return;
         if (!res.ok) {
           setOutcome({ kind: "saveFailed", durationSec, message: json?.error?.message ?? "완주 기록을 저장하지 못했습니다" });
           return;
@@ -123,11 +124,8 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
         router.push(`/courses/${course.id}/done?completion=${json.data.id}`);
       })
       .catch(() => {
-        if (active) setOutcome({ kind: "saveFailed", durationSec, message: "네트워크 문제로 저장하지 못했습니다" });
+        setOutcome({ kind: "saveFailed", durationSec, message: "네트워크 문제로 저장하지 못했습니다" });
       });
-    return () => {
-      active = false;
-    };
   }, [acceptedKey, course.id, router]);
 
   // 기록 끊김 (PLAN 13번): 위치가 한동안 들어오지 않으면 알린다

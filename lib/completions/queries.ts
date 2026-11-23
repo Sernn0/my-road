@@ -8,6 +8,7 @@ export type CompletionSummary = {
   completedAt: string; // ISO
   durationSec: number;
   distanceKm: number;
+  xp: number; // 이번 완주로 받은 경험치
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -18,7 +19,7 @@ export async function getCompletion(id: string): Promise<CompletionSummary | nul
   if (!userId || !UUID.test(id)) return null;
   const { data, error } = await createServerSupabase()
     .from("completions")
-    .select("id, completed_at, duration_sec, distance_km, courses(name)")
+    .select("id, completed_at, duration_sec, distance_km, xp, courses(name)")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -32,5 +33,6 @@ export async function getCompletion(id: string): Promise<CompletionSummary | nul
     completedAt: data.completed_at as string,
     durationSec: data.duration_sec as number,
     distanceKm: Number(data.distance_km),
+    xp: data.xp as number,
   };
 }
