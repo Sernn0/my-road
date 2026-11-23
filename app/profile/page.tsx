@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import Avatar from "@/components/Avatar";
+import { LevelBadge } from "@/components/icons";
 import LogoutButton from "@/components/LogoutButton";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { levelInfo, MAX_XP } from "@/lib/progress/level";
@@ -17,9 +19,13 @@ async function Profile() {
 
   return (
     <main className="flex flex-1 flex-col gap-5 px-4 py-6">
-      <div className="text-center">
-        <p className="text-sm text-foreground/60">{user.nickname}</p>
-        <h1 className="mt-1 text-3xl font-bold">{info.title}</h1>
+      <div className="flex flex-col items-center text-center">
+        <Avatar userId={user.id} nickname={user.nickname} size={88} />
+        <p className="mt-2 text-sm text-foreground/60">{user.nickname}</p>
+        <h1 className="mt-1 flex items-center gap-2 text-3xl font-bold">
+          <LevelBadge level={info.level} size={28} />
+          {info.title}
+        </h1>
         <p className="mt-1 text-foreground/70" data-testid="level-section">
           {info.maxed ? "최고 레벨 달성" : `${info.level}레벨 · ${info.section}/${info.sectionCount} 구간`}
         </p>

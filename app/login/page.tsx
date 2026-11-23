@@ -1,27 +1,59 @@
 import { Suspense } from "react";
-import LoginForm from "@/components/LoginForm";
+import Avatar from "@/components/Avatar";
+import LoginButton from "@/components/LoginButton";
+import UserStats from "@/components/UserStats";
 import { listUsers } from "@/lib/auth/current-user";
-import { describeProgress } from "@/lib/progress/summary";
 
-// 로그인 화면 (DESIGN.md 2번 `/login`, nice, 더미). 계정 목록은 서버에서 불러온다.
+// 로그인(스플래시) 화면: 앱 이름을 가운데보다 조금 위에 두고, 그 아래에 테스트 계정 3개를 보여 준다.
+// 계정을 누르면 그 계정으로 시작한다. (MVP는 테스트 계정으로만 시연하므로 새 계정 만들기는 없다)
 async function Accounts() {
   const users = await listUsers();
-  const accounts = users.map((u) => ({ id: u.id, nickname: u.nickname, summary: describeProgress(u) }));
-  return <LoginForm accounts={accounts} />;
+  return (
+    <ul className="grid w-full grid-cols-3 gap-2">
+      {users.map((u) => (
+        <li key={u.id}>
+          <LoginButton userId={u.id} label={u.nickname}>
+            <Avatar userId={u.id} nickname={u.nickname} size={76} />
+            <span className="text-sm font-semibold">{u.nickname}</span>
+            <UserStats user={u} layout="stack" />
+          </LoginButton>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AccountsSkeleton() {
+  return (
+    <div className="grid w-full grid-cols-3 gap-2" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="flex flex-col items-center gap-2 py-3">
+          <div className="h-[76px] w-[76px] animate-pulse rounded-full bg-foreground/10" />
+          <div className="h-4 w-16 animate-pulse rounded bg-foreground/10" />
+          <div className="h-8 w-14 animate-pulse rounded bg-foreground/10" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function LoginPage() {
   return (
-    <>
-      <header className="border-b border-black/10 px-4 py-4 dark:border-white/15">
-        <h1 className="text-xl font-bold">마이로드</h1>
-        <p className="mt-0.5 text-sm text-foreground/60">시작하기 (더미 로그인)</p>
-      </header>
-      <main className="flex-1 px-4 py-6">
-        <Suspense fallback={<p className="text-center text-foreground/60">계정을 불러오는 중이에요…</p>}>
+    <main className="flex min-h-dvh flex-1 flex-col items-center px-5">
+      {/* 위 여백을 아래보다 작게 두어 앱 이름이 화면 가운데보다 조금 위에 오게 한다 */}
+      <div className="flex-[0.8]" />
+      <div className="splash-in flex flex-col items-center gap-2 text-center">
+        <h1 className="text-5xl font-extrabold tracking-tight text-emerald-600">마이로드</h1>
+        <p className="text-sm text-foreground/60">나만의 운동 코스를 기록하고 따라가요</p>
+      </div>
+
+      <section aria-label="테스트 계정" className="splash-in-late mt-14 flex w-full flex-col items-center gap-3">
+        <p className="text-xs text-foreground/50">테스트 계정을 골라 시작하세요</p>
+        <Suspense fallback={<AccountsSkeleton />}>
           <Accounts />
         </Suspense>
-      </main>
-    </>
+      </section>
+      <div className="flex-1" />
+    </main>
   );
 }

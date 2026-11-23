@@ -47,12 +47,20 @@ export async function getCurrentUserId(): Promise<string | null> {
   return (await getCurrentUser())?.id ?? null;
 }
 
-// 로그인 화면에 보여 줄 더미 계정 목록
+// 시연에 쓰는 테스트 계정 3개 (MVP는 이 계정들로만 시연한다)
+export const TEST_ACCOUNT_IDS = [
+  "00000000-0000-0000-0000-000000000001",
+  "00000000-0000-0000-0000-000000000002",
+  "00000000-0000-0000-0000-000000000003",
+];
+
+// 로그인 화면에 보여 줄 테스트 계정 목록
 export async function listUsers(): Promise<UserProfile[]> {
   const { data, error } = await createServerSupabase()
     .from("users")
     .select(USER_COLUMNS)
-    .order("created_at", { ascending: true });
+    .in("id", TEST_ACCOUNT_IDS)
+    .order("id", { ascending: true });
   if (error) throw new Error("계정 목록을 불러오지 못했습니다");
   return (data as UserRow[]).map(toProfile);
 }
