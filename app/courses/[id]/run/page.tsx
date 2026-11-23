@@ -5,8 +5,15 @@ import RunView from "@/components/RunView";
 import { getCourse } from "@/lib/courses/queries";
 
 // 운동 화면 (DESIGN.md 2번 `/courses/[id]/run`)
-async function RunScreen({ params }: { params: PageProps<"/courses/[id]/run">["params"] }) {
+async function RunScreen({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/courses/[id]/run">["params"];
+  searchParams: PageProps<"/courses/[id]/run">["searchParams"];
+}) {
   const { id } = await params;
+  const { scenario } = await searchParams; // 시연 모드 시험용: ?scenario=shortcut
   const course = await getCourse(id);
   if (!course) notFound();
 
@@ -28,6 +35,7 @@ async function RunScreen({ params }: { params: PageProps<"/courses/[id]/run">["p
             startLng: course.startLng,
             path: course.path,
           }}
+          scenario={typeof scenario === "string" ? scenario : undefined}
         />
       </main>
     </>
@@ -37,7 +45,7 @@ async function RunScreen({ params }: { params: PageProps<"/courses/[id]/run">["p
 export default function RunPage(props: PageProps<"/courses/[id]/run">) {
   return (
     <Suspense fallback={<p className="py-10 text-center text-foreground/60">불러오는 중이에요…</p>}>
-      <RunScreen params={props.params} />
+      <RunScreen params={props.params} searchParams={props.searchParams} />
     </Suspense>
   );
 }

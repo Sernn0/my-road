@@ -12,6 +12,8 @@ import { useWatchPosition } from "@/lib/location/useWatchPosition";
 
 // 시작점에서 이 거리(m)보다 멀면 "코스를 이탈했습니다"를 알린다. (PRD 5번, 이탈 기준과 같은 50m)
 const START_TOLERANCE_M = 50;
+// 코스에서 이 거리(m)보다 멀리 벗어나면 이탈을 알린다. (PRD 5번)
+const OFF_ROUTE_M = 50;
 
 type RunCourse = {
   id: string;
@@ -30,9 +32,9 @@ function formatElapsed(ms: number): string {
   return h > 0 ? `${h}:${p(m)}:${p(total % 60)}` : `${p(m)}:${p(total % 60)}`;
 }
 
-// 운동 화면 (PLAN 10·11번): 시간 기록, 시작점 확인, 현재 위치와 남은 거리.
-// (이탈 감시는 12번, 화면 켜짐·끊김 안내는 13번, 정확도 안내는 14번에서 추가)
-export default function RunView({ course }: { course: RunCourse }) {
+// 운동 화면 (PLAN 10·11번): 시간 기록, 시작점 확인, 현재 위치와 남은 거리, 코스 이탈 알림.
+// (화면 켜짐·끊김 안내는 13번, 정확도 안내는 14번에서 추가)
+export default function RunView({ course, scenario }: { course: RunCourse; scenario?: string }) {
   const [elapsedMs, setElapsedMs] = useState(0);
 
   // 시간 기록: 화면이 열린 순간부터 1초마다 갱신
@@ -52,7 +54,7 @@ export default function RunView({ course }: { course: RunCourse }) {
     }) > START_TOLERANCE_M;
 
   // 위치 권한이 허용된 뒤부터 위치를 계속 받는다
-  const watched = useWatchPosition(status === "granted", course.path);
+  const watched = useWatchPosition(status === "granted", course.path, scenario);
   // 정확도가 50m보다 나쁜 위치는 계산에 쓰지 않는다 (PRD 5번)
   const usable = watched && watched.accuracy <= GPS_ACCURACY_LIMIT_M ? watched : null;
   const [last, setLast] = useState<typeof usable>(null);
@@ -63,8 +65,19 @@ export default function RunView({ course }: { course: RunCourse }) {
     [course.path, last],
   );
 
+  // 코스에서 50m 넘게 벗어났는지 (PLAN 12번)
+  const offRoute = progress !== null && progress.offRouteM > OFF_ROUTE_M;
+  useEffect(() => {
+    if (offRoute) navigator.vibrate?.(200); // 벗어나는 순간 한 번 진동 (지원하는 기기만)
+  }, [offRoute]);
+
   return (
     <div className="flex w-full flex-1 flex-col">
+      {offRoute && progress && (
+        <div role="alert" className="bg-red-600 px-4 py-3 text-center font-semibold text-white">
+          코스에서 벗어났어요 (코스까지 약 {Math.round(progress.offRouteM)}m)
+        </div>
+      )}
       <div className="h-[42dvh] min-h-60 w-full">
         <CourseMapLoader path={course.path} current={last ? [last.lat, last.lng] : null} />
       </div>
