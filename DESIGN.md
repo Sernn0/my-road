@@ -93,6 +93,20 @@
 
 API 키는 이 서버 코드에서만 쓴다.
 
+**응답 형식:** 성공은 `{ data: ... }`, 실패는 `{ error: { code, message } }`로 통일한다.
+
+**`.env` 변수 이름** (모두 `NEXT_PUBLIC_`으로 시작하지 않는다)
+
+| 이름 | 용도 |
+|---|---|
+| `SUPABASE_URL` | Supabase 프로젝트 주소 |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 Supabase 키 |
+| `KMA_API_KEY` | 기상청 날씨 키 |
+
+(`SUPABASE_ACCESS_TOKEN`은 CLI 작업용이며 앱 코드에서는 쓰지 않는다.)
+
+**Supabase 접근 방식:** 서버 API만 서버 키로 데이터베이스에 접근한다. 테이블은 행 단위 보안(RLS)을 켜고 정책을 만들지 않아, 브라우저에서 직접 접근하는 길을 막는다.
+
 ## 6. 기술 선택
 
 **기본:** Next.js 16 (App Router, TypeScript, Tailwind) + Supabase + Vercel. (고정)
