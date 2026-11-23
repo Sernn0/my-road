@@ -29,8 +29,12 @@ async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["pa
           <CourseMapLoader path={course.path} />
         </div>
 
-        {/* 날씨는 따로 불러오므로, 늦어도 지도와 거리는 먼저 보인다 */}
-        <section className="px-4 py-4" aria-label="날씨">
+        {/* 출발 전 확인: 거리와 날씨를 지도 아래에 모아 한 화면에서 본다. 날씨는 따로 불러오므로 늦어도 지도와 거리는 먼저 보인다 */}
+        <section className="flex flex-col gap-3 px-4 py-4" aria-label="출발 전 확인">
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm text-foreground/60">코스 거리</span>
+            <span className="text-2xl font-bold">{formatDistanceKm(course.distanceKm)}</span>
+          </div>
           <Suspense fallback={<p className="text-sm text-foreground/60">날씨를 불러오는 중이에요…</p>}>
             <WeatherCard lat={course.startLat} lng={course.startLng} />
           </Suspense>
