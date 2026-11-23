@@ -103,3 +103,59 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .wx-rain, .wx-drift, .wx-twinkle, .wx-spin, .wx-sway, .wx-gust, .wx-mist, .wx-rise { animation: none; }
 }
+
+/* 운동 중 현재 위치 표시 (방향 화살표 + 퍼지는 물결) */
+.runner-marker {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+.runner-marker svg {
+  position: relative;
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.3));
+}
+.runner-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgb(37 99 235 / 0.35);
+  animation: runner-pulse 1.8s ease-out infinite;
+}
+@keyframes runner-pulse {
+  from { transform: scale(0.7); opacity: 0.9; }
+  to { transform: scale(2.2); opacity: 0; }
+}
+/* 운동 시작 버튼의 은은한 빛 흐름 */
+@keyframes shine {
+  from { transform: translateX(-120%) skewX(-20deg); }
+  to { transform: translateX(320%) skewX(-20deg); }
+}
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  animation: shine 2.8s ease-in-out infinite;
+}
+/* 아래에서 떠오르는 카드 */
+@keyframes sheet-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.sheet-up {
+  animation: sheet-up 0.45s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .runner-pulse, .btn-shine::after, .sheet-up { animation: none; }
+}
+/* "기록 중" 빨간 점 깜빡임 */
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.rec-dot { animation: rec-blink 1.4s ease-in-out infinite; }

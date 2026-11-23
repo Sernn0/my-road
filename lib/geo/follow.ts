@@ -1,4 +1,4 @@
-import { length, lineString, nearestPointOnLine, point } from "@turf/turf";
+import { along, bearing, length, lineString, nearestPointOnLine, point } from "@turf/turf";
 
 // 코스를 따라가는 중의 진행 정보 (PLAN 11번). 점은 [위도, 경도] 순서이다.
 export type FollowProgress = {
@@ -21,4 +21,16 @@ export function followProgress(path: [number, number][], lat: number, lng: numbe
     remainingKm: Math.max(0, totalKm - alongKm),
     offRouteM: offKm * 1000,
   };
+}
+
+// 코스 위 alongKm 지점에서 앞으로 가야 할 방향(북쪽 0도, 시계 방향). 운동 중 지도를 "가는 방향이 위"로 돌릴 때 쓴다.
+// GPS 흔들림에 덜 흔들리도록, 현재 위치 대신 코스 선의 앞쪽 50m 방향을 쓴다.
+export function routeBearingAt(path: [number, number][], alongKm: number): number {
+  const line = lineString(path.map(([la, ln]) => [ln, la]));
+  const total = length(line, { units: "kilometers" });
+  const from = Math.min(Math.max(alongKm, 0), Math.max(total - 0.05, 0));
+  const a = along(line, from, { units: "kilometers" });
+  const b = along(line, Math.min(from + 0.05, total), { units: "kilometers" });
+  const deg = bearing(a, b);
+  return (deg + 360) % 360;
 }

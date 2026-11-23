@@ -43,7 +43,7 @@ export async function getCourse(id: string): Promise<CourseDetail | null> {
   if (!UUID.test(id)) return null;
   const { data, error } = await createServerSupabase()
     .from("courses")
-    .select("id, name, distance_km, path, start_lat, start_lng")
+    .select("id, name, distance_km, path, start_lat, start_lng, is_demo")
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error("코스를 불러오지 못했습니다");
@@ -55,5 +55,6 @@ export async function getCourse(id: string): Promise<CourseDetail | null> {
     path: data.path as [number, number][],
     startLat: data.start_lat as number,
     startLng: data.start_lng as number,
+    isDemo: data.is_demo as boolean,
   };
 }

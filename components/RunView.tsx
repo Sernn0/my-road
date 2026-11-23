@@ -4,9 +4,10 @@ import { distance, point } from "@turf/turf";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import BottomSheet from "@/components/BottomSheet";
 import CourseMapLoader from "@/components/CourseMapLoader";
 import { FINISH_RADIUS_M, judgeCompletion } from "@/lib/geo/completion";
-import { followProgress } from "@/lib/geo/follow";
+import { followProgress, routeBearingAt } from "@/lib/geo/follow";
 import { formatDistanceKm } from "@/lib/format";
 import { GPS_ACCURACY_LIMIT_M } from "@/lib/location/config";
 import { useCurrentLocation } from "@/lib/location/useCurrentLocation";
@@ -162,19 +163,34 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
     if (offRoute) navigator.vibrate?.(200); // 벗어나는 순간 한 번 진동 (지원하는 기기만)
   }, [offRoute]);
 
+  // 지도 방향: 코스 위 지금 지점에서 앞으로 갈 방향이 화면 위쪽이 되게 한다
+  const alongKm = progress?.alongKm ?? 0;
+  const heading = useMemo(() => routeBearingAt(course.path, alongKm), [course.path, alongKm]);
+  const totalKm = progress?.totalKm ?? course.distanceKm;
+  const percent = Math.min(100, Math.round((alongKm / Math.max(totalKm, 0.001)) * 100));
+  // 평균 페이스 (1km에 걸린 시간). 50m 이상 움직였을 때부터 보여 준다
+  const paceSec = alongKm >= 0.05 ? elapsedMs / 1000 / alongKm : null;
+
   // 반려: 코스를 잘 따르지 못한 이유를 알리고 저장하지 않는다
   if (outcome.kind === "rejected") {
     return (
-      <div className="flex w-full flex-1 flex-col items-center justify-center gap-4 px-4 text-center" role="alert">
+      <div className="sheet-up flex min-h-dvh w-full flex-col items-center justify-center gap-4 bg-gradient-to-b from-amber-50 to-white px-5 text-center" role="alert">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-4xl">🧭</div>
         <h2 className="text-2xl font-bold">완주로 인정되지 않았습니다</h2>
         <p className="text-sm text-foreground/60">코스를 잘 따라가지 못해서 기록을 저장하지 않았어요.</p>
-        <ul className="w-full list-disc rounded-2xl border border-black/10 py-3 pl-8 pr-4 text-left text-sm dark:border-white/15">
+        <ul className="w-full space-y-2 rounded-2xl bg-white p-4 text-left text-sm shadow-sm ring-1 ring-black/5">
           {outcome.reasons.map((r) => (
-            <li key={r}>{r}</li>
+            <li key={r} className="flex gap-2">
+              <span className="text-amber-500">●</span>
+              <span>{r}</span>
+            </li>
           ))}
         </ul>
         <Link href={`/courses/${course.id}`} className="flex h-14 w-full items-center justify-center rounded-2xl bg-emerald-600 text-lg font-semibold text-white">
-          출발 전 확인으로 돌아가기
+          다시 도전하기
+        </Link>
+        <Link href="/" className="text-sm text-foreground/60 underline">
+          코스 목록으로
         </Link>
       </div>
     );
@@ -184,7 +200,7 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
   if (outcome.kind === "saveFailed") {
     const { durationSec } = outcome;
     return (
-      <div className="flex w-full flex-1 flex-col items-center justify-center gap-4 px-4 text-center" role="alert">
+      <div className="sheet-up flex min-h-dvh w-full flex-col items-center justify-center gap-4 px-5 text-center" role="alert">
         <h2 className="text-2xl font-bold">완주했어요!</h2>
         <p className="text-amber-600">{outcome.message}</p>
         <button
@@ -198,98 +214,166 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
     );
   }
 
+  const alerts: { key: string; tone: "red" | "amber" | "info"; title: string; sub?: string }[] = [];
+  if (status === "denied") alerts.push({ key: "denied", tone: "red", title: "위치 권한을 허용해 주세요" });
+  if (status === "unavailable" || status === "timeout" || status === "unsupported")
+    alerts.push({ key: "nopos", tone: "amber", title: "현재 위치를 알 수 없어요" });
+  if (status === "granted" && offStart)
+    alerts.push({ key: "start", tone: "red", title: "코스를 이탈했습니다", sub: `코스 시작점에서 ${START_TOLERANCE_M}m 넘게 떨어져 있어요` });
+  if (offRoute && progress)
+    alerts.push({ key: "off", tone: "red", title: "코스에서 벗어났어요", sub: `코스까지 약 ${Math.round(progress.offRouteM)}m` });
+  if (lost) alerts.push({ key: "lost", tone: "amber", title: "기록이 끊겼습니다", sub: "화면이 꺼지면 위치를 받지 못해요" });
+  if (lowAccuracy) alerts.push({ key: "acc", tone: "amber", title: "위치 정확도가 낮습니다", sub: "정확도가 좋아질 때까지 기록을 확정하지 않아요" });
+  if (outcome.kind === "accepted") alerts.push({ key: "done", tone: "info", title: "완주! 기록을 저장하는 중이에요…" });
+
   return (
-    <div className="flex w-full flex-1 flex-col">
-      <p className="bg-foreground/5 px-4 py-2 text-center text-sm">화면을 켜 두세요. 꺼지면 기록이 끊길 수 있어요.</p>
-      {lost && (
-        <div role="alert" className="bg-amber-500 px-4 py-3 text-center font-semibold text-black">
-          기록이 끊겼습니다
+    <div className="relative h-dvh w-full overflow-hidden bg-[#F4F8F5]">
+      {/* 지도: 현재 위치를 따라가며 가는 방향이 위로 오게 돈다 */}
+      <div className="absolute inset-0">
+        <CourseMapLoader
+          path={course.path}
+          mode="follow"
+          current={last ? [last.lat, last.lng] : null}
+          heading={heading}
+          progressKm={alongKm}
+          padding={{ top: 330, bottom: 250, left: 40, right: 40 }} // 내 위치가 화면 아래쪽에 와서 앞길이 넓게 보이도록
+        />
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-white/85 via-white/40 to-transparent" />
+
+      {/* 위: 나가기(포기) · 기록 중 표시 · 나침반 */}
+      <div className="absolute inset-x-0 top-0 flex items-start justify-between px-4 pt-4">
+        <button
+          type="button"
+          onClick={() => setGiveUpAsk(true)}
+          className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold shadow-lg ring-1 ring-black/5 active:scale-95"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+          </svg>
+          나가기
+        </button>
+        <div className="mt-1 flex flex-col items-center gap-1">
+          <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold shadow ring-1 ring-black/5">
+            <span className="rec-dot h-2 w-2 rounded-full bg-red-500" /> 기록 중
+          </span>
+          <span className="text-[11px] text-foreground/60">화면을 켜 두세요</span>
         </div>
-      )}
-      {lowAccuracy && (
-        <div role="alert" className="bg-amber-500 px-4 py-3 text-center font-semibold text-black">
-          위치 정확도가 낮습니다
-          <span className="block text-sm font-normal">정확도가 좋아질 때까지 기록을 확정하지 않아요</span>
-        </div>
-      )}
-      {offRoute && progress && (
-        <div role="alert" className="bg-red-600 px-4 py-3 text-center font-semibold text-white">
-          코스에서 벗어났어요 (코스까지 약 {Math.round(progress.offRouteM)}m)
-        </div>
-      )}
-      <div className="isolate h-[42dvh] min-h-60 w-full">
-        <CourseMapLoader path={course.path} current={last ? [last.lat, last.lng] : null} />
+        <Compass heading={heading} />
       </div>
 
-      <div className="flex flex-1 flex-col items-center gap-3 px-4 py-4 text-center">
-        <p className="text-sm text-foreground/60">
-          {course.name} · {formatDistanceKm(course.distanceKm)}
-        </p>
-
-        <div className="grid w-full grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-black/10 px-3 py-3 dark:border-white/15">
-            <p className="text-sm text-foreground/60">경과 시간</p>
-            <p className="font-mono text-3xl font-bold" data-testid="elapsed">
-              {formatElapsed(elapsedMs)}
-            </p>
+      {/* 알림: 지도 위쪽에 차례로 띄운다 */}
+      <div className="absolute inset-x-4 top-[92px] flex flex-col gap-2" aria-live="polite">
+        {alerts.map((a) => (
+          <div
+            key={a.key}
+            role="alert"
+            className={`sheet-up rounded-2xl px-4 py-2.5 text-sm shadow-lg ${
+              a.tone === "red" ? "bg-red-600 text-white" : a.tone === "amber" ? "bg-amber-400 text-black" : "bg-emerald-600 text-white"
+            }`}
+          >
+            <p className="font-semibold">{a.title}</p>
+            {a.sub && <p className="text-xs opacity-90">{a.sub}</p>}
+            {a.key === "denied" && (
+              <button type="button" onClick={retry} className="mt-1 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+                다시 시도
+              </button>
+            )}
           </div>
-          <div className="rounded-2xl border border-black/10 px-3 py-3 dark:border-white/15">
-            <p className="text-sm text-foreground/60">남은 거리</p>
-            <p className="text-3xl font-bold" data-testid="remaining">
-              {progress ? formatDistanceKm(progress.remainingKm) : "-"}
-            </p>
-          </div>
-        </div>
+        ))}
+        {status === "asking" && <p className="self-center rounded-full bg-white/90 px-3 py-1 text-xs shadow">현재 위치를 확인하는 중이에요…</p>}
+      </div>
 
-        {status === "asking" && <p className="text-sm text-foreground/60">현재 위치를 확인하는 중이에요…</p>}
-
-        {status === "denied" && (
-          <div role="alert" className="flex flex-col items-center gap-2">
-            <p className="font-semibold">위치 권한을 허용해 주세요</p>
-            <button type="button" onClick={retry} className="h-11 rounded-2xl bg-emerald-600 px-5 font-semibold text-white">
-              다시 시도
-            </button>
-          </div>
-        )}
-
-        {(status === "unavailable" || status === "timeout" || status === "unsupported") && (
-          <p role="alert" className="text-sm text-amber-600">
-            현재 위치를 알 수 없어요.
-          </p>
-        )}
-
-        {status === "granted" && offStart && (
-          <div role="alert" className="flex flex-col items-center gap-1">
-            <p className="text-lg font-semibold text-red-600">코스를 이탈했습니다</p>
-            <p className="text-sm text-foreground/60">코스 시작점에서 {START_TOLERANCE_M}m 넘게 떨어져 있어요.</p>
-          </div>
-        )}
-        {status === "granted" && !offStart && <p className="text-sm text-emerald-600">시작점에서 출발했어요</p>}
-        {isDemo && <p className="text-sm font-medium text-emerald-600">시연용 가짜 위치로 달리는 중이에요</p>}
-
-        {outcome.kind === "accepted" && <p className="text-sm text-emerald-600">완주! 기록을 저장하는 중이에요…</p>}
-
-        {/* 운동 도중 종료는 포기로 보고 기록을 저장하지 않는다 (PRD 5번) */}
-        <div className="mt-auto w-full pt-2">
-          {giveUpAsk ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-sm">운동을 포기할까요? 기록은 저장되지 않아요.</p>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => router.push(`/courses/${course.id}`)} className="h-12 flex-1 rounded-xl bg-red-600 font-semibold text-white">
-                  포기
-                </button>
-                <button type="button" onClick={() => setGiveUpAsk(false)} className="h-12 flex-1 rounded-xl border border-black/15 dark:border-white/20">
-                  계속하기
-                </button>
-              </div>
+      {/* 아래: 운동 정보 */}
+      <section aria-label="운동 정보" className="sheet-up absolute inset-x-0 bottom-0 px-3 pb-5">
+        <div className="rounded-3xl bg-white/95 p-4 shadow-[0_-4px_24px_rgb(0_0_0/0.12)] ring-1 ring-black/5 backdrop-blur">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-xs font-medium text-foreground/50">남은 거리</p>
+              <p className="text-5xl font-extrabold leading-none tracking-tight text-emerald-600" data-testid="remaining">
+                {progress ? formatDistanceKm(progress.remainingKm).replace("km", "") : "-"}
+                <span className="ml-1 text-xl font-bold text-emerald-600/70">km</span>
+              </p>
             </div>
-          ) : (
-            <button type="button" onClick={() => setGiveUpAsk(true)} className="h-12 w-full rounded-xl border border-black/15 text-foreground/70 dark:border-white/20">
-              운동 포기
-            </button>
-          )}
+            <p className="max-w-[45%] truncate text-right text-xs text-foreground/50">{course.name}</p>
+          </div>
+
+          {/* 진행 막대: 지나온 만큼 채워지고 끝에 달리는 점이 있다 */}
+          <div className="relative mt-3 h-2.5 rounded-full bg-emerald-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-[width] duration-700" style={{ width: `${percent}%` }} />
+            <span
+              className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white bg-blue-600 shadow transition-[left] duration-700"
+              style={{ left: `${percent}%` }}
+            />
+          </div>
+          <div className="mt-1 flex justify-between text-[11px] text-foreground/50">
+            <span>출발</span>
+            <span>{percent}%</span>
+            <span>도착</span>
+          </div>
+
+          <dl className="mt-3 grid grid-cols-3 divide-x divide-black/5 rounded-2xl bg-emerald-50/70 py-2.5 text-center">
+            <div>
+              <dt className="text-[11px] text-foreground/50">소요 시간</dt>
+              <dd className="font-mono text-lg font-bold" data-testid="elapsed">
+                {formatElapsed(elapsedMs)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] text-foreground/50">총 거리</dt>
+              <dd className="text-lg font-bold">{formatDistanceKm(totalKm)}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] text-foreground/50">평균 페이스</dt>
+              <dd className="text-lg font-bold">{paceSec ? formatPace(paceSec) : "-"}</dd>
+            </div>
+          </dl>
+          {isDemo && <p className="mt-2 text-center text-[11px] font-medium text-emerald-600">시연용 가짜 위치로 달리는 중이에요</p>}
         </div>
-      </div>
+      </section>
+
+      {/* 운동 도중 나가기는 포기로 보고 기록을 저장하지 않는다 (PRD 5번) */}
+      {giveUpAsk && (
+        <BottomSheet title="운동을 그만둘까요?" onClose={() => setGiveUpAsk(false)}>
+          <p className="mb-4 text-sm text-foreground/60">지금 나가면 포기로 처리되고 기록은 저장되지 않아요.</p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setGiveUpAsk(false)} className="h-14 flex-1 rounded-2xl bg-emerald-600 font-semibold text-white">
+              계속 달리기
+            </button>
+            <button type="button" onClick={() => router.push(`/courses/${course.id}`)} className="h-14 flex-1 rounded-2xl bg-red-50 font-semibold text-red-600">
+              포기하고 나가기
+            </button>
+          </div>
+        </BottomSheet>
+      )}
+    </div>
+  );
+}
+
+// 1km 페이스: 초 → "6'05\""
+function formatPace(secPerKm: number): string {
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}'${String(s).padStart(2, "0")}"`;
+}
+
+// 나침반: 지도가 가는 방향으로 돌아가므로, 북쪽(N) 글자도 함께 돌아 실제 북쪽을 가리킨다. 가운데 화살표는 내가 가는 방향(위).
+function Compass({ heading }: { heading: number }) {
+  return (
+    <div className="relative h-14 w-14 rounded-full bg-white shadow-lg ring-1 ring-black/5" aria-label={`나침반, 진행 방향 ${Math.round(heading)}도`} role="img">
+      <svg viewBox="0 0 56 56" className="absolute inset-0 transition-transform duration-700 ease-out" style={{ transform: `rotate(${-heading}deg)` }} aria-hidden="true">
+        <circle cx="28" cy="28" r="24" fill="none" stroke="#E5EFEA" strokeWidth="2" />
+        {[0, 90, 180, 270].map((d) => (
+          <line key={d} x1="28" y1="5" x2="28" y2="9" stroke="#9DB8AA" strokeWidth="2" transform={`rotate(${d} 28 28)`} />
+        ))}
+        <text x="28" y="17" textAnchor="middle" fontSize="9" fontWeight="800" fill="#DC2626">N</text>
+        <text x="28" y="48" textAnchor="middle" fontSize="7" fontWeight="700" fill="#64748B">S</text>
+        <text x="46" y="31" textAnchor="middle" fontSize="7" fontWeight="700" fill="#64748B">E</text>
+        <text x="10" y="31" textAnchor="middle" fontSize="7" fontWeight="700" fill="#64748B">W</text>
+      </svg>
+      <svg viewBox="0 0 56 56" className="absolute inset-0" aria-hidden="true">
+        <path d="M28 20 L33 34 L28 31 L23 34 Z" fill="#2563EB" />
+      </svg>
     </div>
   );
 }

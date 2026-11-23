@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import RunView from "@/components/RunView";
@@ -17,15 +16,9 @@ async function RunScreen({
   const course = await getCourse(id);
   if (!course) notFound();
 
+  // 뒤로 가기 머리줄 없이 화면 전체를 지도로 쓴다. 나가기(포기)는 운동 화면 안의 버튼으로 한다.
   return (
-    <>
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-black/10 bg-background px-4 py-4 dark:border-white/15">
-        <Link href={`/courses/${course.id}`} aria-label="출발 전 확인으로 돌아가기" className="text-2xl leading-none">
-          ←
-        </Link>
-        <h1 className="text-lg font-bold">운동</h1>
-      </header>
-      <main className="flex flex-1 flex-col">
+    <main className="flex flex-1 flex-col">
         <RunView
           course={{
             id: course.id,
@@ -37,14 +30,13 @@ async function RunScreen({
           }}
           scenario={typeof scenario === "string" ? scenario : undefined}
         />
-      </main>
-    </>
+    </main>
   );
 }
 
 export default function RunPage(props: PageProps<"/courses/[id]/run">) {
   return (
-    <Suspense fallback={<p className="py-10 text-center text-foreground/60">불러오는 중이에요…</p>}>
+    <Suspense fallback={<div className="h-dvh animate-pulse bg-[#F4F8F5]" aria-label="불러오는 중이에요" />}>
       <RunScreen params={props.params} searchParams={props.searchParams} />
     </Suspense>
   );
