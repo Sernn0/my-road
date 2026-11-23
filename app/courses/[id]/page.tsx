@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import CourseMapLoader from "@/components/CourseMapLoader";
+import WeatherCard from "@/components/WeatherCard";
 import { getCourse } from "@/lib/courses/queries";
 import { formatDistanceKm } from "@/lib/format";
 
-// 출발 전 확인 화면 (DESIGN.md 2번 `/courses/[id]`). 지금은 경로 지도와 거리까지. (날씨는 PLAN 8·9번, 운동 시작은 10번)
+// 출발 전 확인 화면 (DESIGN.md 2번 `/courses/[id]`). 경로 지도·거리·날씨. (한 화면 구성 다듬기는 PLAN 9번, 운동 시작은 10번)
 async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["params"] }) {
   const { id } = await params;
   const course = await getCourse(id);
@@ -27,6 +28,13 @@ async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["pa
         <div className="h-[55dvh] min-h-72 w-full">
           <CourseMapLoader path={course.path} />
         </div>
+
+        {/* 날씨는 따로 불러오므로, 늦어도 지도와 거리는 먼저 보인다 */}
+        <section className="px-4 py-4" aria-label="날씨">
+          <Suspense fallback={<p className="text-sm text-foreground/60">날씨를 불러오는 중이에요…</p>}>
+            <WeatherCard lat={course.startLat} lng={course.startLng} />
+          </Suspense>
+        </section>
       </main>
     </>
   );
