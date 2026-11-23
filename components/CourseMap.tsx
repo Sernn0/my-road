@@ -16,7 +16,13 @@ function FitToPath({ path }: { path: [number, number][] }) {
   return null;
 }
 
-export default function CourseMap({ path }: { path: [number, number][] }) {
+export default function CourseMap({
+  path,
+  current,
+}: {
+  path: [number, number][];
+  current?: [number, number] | null; // 운동 중 현재 위치 (파란 점)
+}) {
   const start = path[0];
   const end = path[path.length - 1];
   return (
@@ -36,6 +42,9 @@ export default function CourseMap({ path }: { path: [number, number][] }) {
       {/* 출발(초록)과 도착(빨강) 표시 */}
       <CircleMarker center={start} radius={8} pathOptions={{ color: "#fff", weight: 2, fillColor: "#059669", fillOpacity: 1 }} />
       <CircleMarker center={end} radius={8} pathOptions={{ color: "#fff", weight: 2, fillColor: "#dc2626", fillOpacity: 1 }} />
+      {current && (
+        <CircleMarker center={current} radius={9} pathOptions={{ color: "#fff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }} />
+      )}
       <FitToPath path={path} />
     </MapContainer>
   );

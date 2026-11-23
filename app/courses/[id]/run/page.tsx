@@ -26,6 +26,7 @@ async function RunScreen({ params }: { params: PageProps<"/courses/[id]/run">["p
             distanceKm: course.distanceKm,
             startLat: course.startLat,
             startLng: course.startLng,
+            path: course.path,
           }}
         />
       </main>

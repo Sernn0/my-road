@@ -12,6 +12,12 @@ const CourseMap = dynamic(() => import("@/components/CourseMap"), {
   ),
 });
 
-export default function CourseMapLoader({ path }: { path: [number, number][] }) {
-  return <CourseMap path={path} />;
+export default function CourseMapLoader({
+  path,
+  current,
+}: {
+  path: [number, number][];
+  current?: [number, number] | null;
+}) {
+  return <CourseMap path={path} current={current} />;
 }

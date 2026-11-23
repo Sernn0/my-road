@@ -1,0 +1,40 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { playPositions, simulatePositions, type LatLng } from "@/lib/demo/simulator";
+import { IS_DEMO } from "./config";
+
+export type WatchedPosition = { lat: number; lng: number; accuracy: number; timestamp: number };
+
+// 운동 중 위치를 계속 받는다 (PLAN 11번). 받은 위치는 화면에만 쓰고 서버에 보내지 않는다. (PRD 7번)
+// 시연 모드에서는 demoPath(코스 경로)를 따라 움직이는 가짜 위치를 빠르게 재생한다.
+export function useWatchPosition(enabled: boolean, demoPath: LatLng[]) {
+  const [position, setPosition] = useState<WatchedPosition | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    if (IS_DEMO) {
+      const fake = simulatePositions(demoPath, { seed: 11, noiseM: 4 });
+      return playPositions(fake, (p) => setPosition(p), { speedUp: 30 });
+    }
+
+    if (!("geolocation" in navigator)) return;
+    const id = navigator.geolocation.watchPosition(
+      (p) =>
+        setPosition({
+          lat: p.coords.latitude,
+          lng: p.coords.longitude,
+          accuracy: p.coords.accuracy,
+          timestamp: p.timestamp,
+        }),
+      () => {
+        // 위치를 못 받는 경우의 알림은 PLAN 13번에서 추가한다
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, [enabled, demoPath]);
+
+  return position;
+}
