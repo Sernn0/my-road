@@ -1,11 +1,8 @@
 import Link from "next/link";
-import CourseCard from "@/components/CourseCard";
-import type { Course } from "@/lib/types";
+import { Suspense } from "react";
+import CourseList from "@/components/CourseList";
 
-// 코스 목록 화면 (DESIGN.md 2번 `/`).
-// 아직 저장소를 연결하기 전이라 목록은 비어 있다. (저장한 코스 불러오기는 PLAN 6번에서 연결)
-const courses: Course[] = [];
-
+// 코스 목록 화면 (DESIGN.md 2번 `/`). 목록은 서버에서 불러와 채운다. (Next 16: 요청 시 데이터는 Suspense 안에서)
 export default function Home() {
   return (
     <>
@@ -15,25 +12,9 @@ export default function Home() {
       </header>
 
       <main className="flex flex-1 flex-col px-4 py-4">
-        {courses.length === 0 ? (
-          // 코스가 없을 때의 안내 (PRD 5번 규칙)
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
-            <p className="text-lg font-semibold">아직 저장한 코스가 없어요</p>
-            <p className="text-sm text-foreground/60">
-              아래 &quot;코스 기록하기&quot;를 눌러
-              <br />
-              자주 가는 코스를 기록해 보세요.
-            </p>
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {courses.map((course) => (
-              <li key={course.id}>
-                <CourseCard course={course} />
-              </li>
-            ))}
-          </ul>
-        )}
+        <Suspense fallback={<p className="py-10 text-center text-foreground/60">코스를 불러오는 중이에요…</p>}>
+          <CourseList />
+        </Suspense>
       </main>
 
       {/* 엄지로 누르기 쉽게 화면 아래에 고정한 큰 버튼 */}
