@@ -1,4 +1,5 @@
-import { createServerSupabase, DUMMY_USER_ID } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/auth/current-user";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 // 완주 요약 저장 (PLAN 16번, DESIGN.md 5번). 이동 경로·위치는 받지도 저장하지도 않는다. (PRD 7번)
 // 요청: { courseId, durationSec } / 응답: 성공 { data: { id } }, 실패 { error: { code, message } }
@@ -9,6 +10,8 @@ function fail(status: number, code: string, message: string) {
 }
 
 export async function POST(request: Request) {
+  const userId = await getCurrentUserId();
+  if (!userId) return fail(401, "LOGIN_REQUIRED", "로그인이 필요합니다");
   let body: { courseId?: unknown; durationSec?: unknown } = {};
   try {
     body = await request.json();
@@ -29,7 +32,7 @@ export async function POST(request: Request) {
     .from("courses")
     .select("distance_km")
     .eq("id", courseId)
-    .eq("user_id", DUMMY_USER_ID)
+    .eq("user_id", userId)
     .maybeSingle();
   if (courseError) return fail(500, "SAVE_FAILED", "완주 기록을 저장하지 못했습니다");
   if (!course) return fail(404, "NOT_FOUND", "코스를 찾을 수 없습니다");
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("completions")
     .insert({
-      user_id: DUMMY_USER_ID,
+      user_id: userId,
       course_id: courseId,
       duration_sec: durationSec,
       distance_km: course.distance_km,

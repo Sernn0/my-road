@@ -1,8 +1,13 @@
 import { validateCourseInput } from "@/lib/courses/validate";
-import { createServerSupabase, DUMMY_USER_ID } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/auth/current-user";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 // 코스 저장 (DESIGN.md 5번). 응답 형식: 성공 { data }, 실패 { error: { code, message } }
 export async function POST(request: Request) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return Response.json({ error: { code: "LOGIN_REQUIRED", message: "로그인이 필요합니다" } }, { status: 401 });
+  }
   let body: unknown;
   try {
     body = await request.json();
@@ -19,7 +24,7 @@ export async function POST(request: Request) {
   const { data, error } = await createServerSupabase()
     .from("courses")
     .insert({
-      user_id: DUMMY_USER_ID,
+      user_id: userId,
       name: result.name,
       path: result.path,
       distance_km: result.distanceKm,

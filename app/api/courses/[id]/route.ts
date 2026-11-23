@@ -1,5 +1,6 @@
 import { MAX_NAME_LENGTH } from "@/lib/courses/validate";
-import { createServerSupabase, DUMMY_USER_ID } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/auth/current-user";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 // 코스 이름 변경(PATCH)과 삭제(DELETE). 응답 형식: 성공 { data }, 실패 { error: { code, message } }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -9,6 +10,8 @@ function fail(status: number, code: string, message: string) {
 }
 
 export async function PATCH(request: Request, ctx: RouteContext<"/api/courses/[id]">) {
+  const userId = await getCurrentUserId();
+  if (!userId) return fail(401, "LOGIN_REQUIRED", "로그인이 필요합니다");
   const { id } = await ctx.params;
   if (!UUID.test(id)) return fail(400, "INVALID_ID", "코스 번호가 올바르지 않습니다");
 
@@ -27,7 +30,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/courses/[i
     .from("courses")
     .update({ name })
     .eq("id", id)
-    .eq("user_id", DUMMY_USER_ID)
+    .eq("user_id", userId)
     .select("id, name")
     .maybeSingle();
   if (error) return fail(500, "UPDATE_FAILED", "이름을 바꾸지 못했습니다");
@@ -36,6 +39,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/courses/[i
 }
 
 export async function DELETE(_request: Request, ctx: RouteContext<"/api/courses/[id]">) {
+  const userId = await getCurrentUserId();
+  if (!userId) return fail(401, "LOGIN_REQUIRED", "로그인이 필요합니다");
   const { id } = await ctx.params;
   if (!UUID.test(id)) return fail(400, "INVALID_ID", "코스 번호가 올바르지 않습니다");
 
@@ -43,7 +48,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/courses/
     .from("courses")
     .delete()
     .eq("id", id)
-    .eq("user_id", DUMMY_USER_ID)
+    .eq("user_id", userId)
     .select("id")
     .maybeSingle();
   if (error) return fail(500, "DELETE_FAILED", "코스를 삭제하지 못했습니다");

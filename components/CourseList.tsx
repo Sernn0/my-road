@@ -1,9 +1,14 @@
+import { redirect } from "next/navigation";
 import CourseCard from "@/components/CourseCard";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 import { listCourses } from "@/lib/courses/queries";
 
 // 저장한 코스 목록. 요청할 때마다 서버에서 불러온다. 비어 있으면 안내 문구를 보여 준다. (PRD 5번)
+// 로그인하지 않았으면 로그인 화면으로 보낸다. (더미 로그인)
 export default async function CourseList() {
-  const courses = await listCourses();
+  const userId = await getCurrentUserId();
+  if (!userId) redirect("/login");
+  const courses = await listCourses(userId);
 
   if (courses.length === 0) {
     return (
