@@ -1,5 +1,6 @@
 import "server-only";
 import { courseThumbnail } from "@/lib/geo/thumbnail";
+import { thumbBasemap } from "@/lib/map/thumb-basemap";
 import type { Course } from "@/lib/types";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -12,13 +13,21 @@ export async function listCourses(userId: string): Promise<Course[]> {
     : query.eq("user_id", userId)
   ).order("created_at", { ascending: false });
   if (error) throw new Error("코스 목록을 불러오지 못했습니다");
-  return (data ?? []).map((row) => ({
-    id: row.id as string,
-    name: row.name as string,
-    distanceKm: Number(row.distance_km),
-    isDemo: row.is_demo as boolean,
-    thumbnail: courseThumbnail(row.path as [number, number][]),
-  }));
+  return Promise.all(
+    (data ?? []).map(async (row) => {
+      const path = row.path as [number, number][];
+      const thumbnail = courseThumbnail(path);
+      // 썸네일 바탕 지도 (아주 간략하게: 큰 길·물·공원). 실패하면 경로만 보인다.
+      const basemap = thumbnail ? await thumbBasemap(`${row.id}:${row.distance_km}`, path) : null;
+      return {
+        id: row.id as string,
+        name: row.name as string,
+        distanceKm: Number(row.distance_km),
+        isDemo: row.is_demo as boolean,
+        thumbnail: thumbnail ? { ...thumbnail, basemap } : null,
+      };
+    }),
+  );
 }
 
 export type CourseDetail = Course & {

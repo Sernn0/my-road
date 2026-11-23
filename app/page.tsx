@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import AddCourseMenu from "@/components/AddCourseMenu";
 import CourseList, { CourseListSkeleton } from "@/components/CourseList";
 import ProfileChip, { ProfileChipSkeleton } from "@/components/ProfileChip";
+import WeatherHero, { WeatherHeroSkeleton } from "@/components/WeatherHero";
 
-// 메인 화면 (DESIGN.md 2번 `/`): 위쪽 가운데에 내 프로필, 아래에 "나의 코스" 카드 목록(한 줄에 2개).
+// 메인 화면 (DESIGN.md 2번 `/`): 위쪽 가운데에 내 프로필, 그 아래 대전 지금 날씨, "나의 코스" 카드 목록(한 줄에 2개).
 // 코스 추가(코스 기록하기, 공유 코드로 추가)는 "나의 코스" 오른쪽 + 버튼에서 한다.
 // 요청할 때마다 서버에서 불러오는 부분은 Suspense로 감싼다. (Next 16 Cache Components)
 export default function Home() {
@@ -16,7 +17,12 @@ export default function Home() {
       </header>
 
       <main className="flex flex-1 flex-col gap-4 px-4 py-5">
-        <div className="flex items-center justify-between">
+        {/* 대전 지금 날씨 (출발 전에 한눈에 보도록 메인에 둔다) */}
+        <Suspense fallback={<WeatherHeroSkeleton />}>
+          <WeatherHero />
+        </Suspense>
+
+        <div className="mt-2 flex items-center justify-between">
           <h1 className="text-xl font-bold">나의 코스</h1>
           <AddCourseMenu />
         </div>
