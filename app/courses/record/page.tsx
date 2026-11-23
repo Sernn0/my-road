@@ -13,7 +13,7 @@ export default function RecordPage() {
         <h1 className="text-xl font-bold">코스 기록하기</h1>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-8">
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-6">
         <CourseRecorder />
       </main>
     </>
