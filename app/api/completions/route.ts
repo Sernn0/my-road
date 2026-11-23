@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     .from("courses")
     .select("distance_km")
     .eq("id", courseId)
-    .eq("user_id", user.id)
+    .or(`user_id.eq.${user.id},is_demo.eq.true`) // 내 코스 또는 시연용 샘플 코스
     .maybeSingle();
   if (courseError) return fail(500, "SAVE_FAILED", "완주 기록을 저장하지 못했습니다");
   if (!course) return fail(404, "NOT_FOUND", "코스를 찾을 수 없습니다");

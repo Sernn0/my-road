@@ -31,6 +31,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/courses/[i
     .update({ name })
     .eq("id", id)
     .eq("user_id", userId)
+    .eq("is_demo", false) // 시연용 샘플 코스는 바꿀 수 없다
     .select("id, name")
     .maybeSingle();
   if (error) return fail(500, "UPDATE_FAILED", "이름을 바꾸지 못했습니다");
@@ -49,6 +50,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/courses/
     .delete()
     .eq("id", id)
     .eq("user_id", userId)
+    .eq("is_demo", false) // 시연용 샘플 코스는 지울 수 없다
     .select("id")
     .maybeSingle();
   if (error) return fail(500, "DELETE_FAILED", "코스를 삭제하지 못했습니다");

@@ -71,12 +71,17 @@ export default function CourseCard({ course }: { course: Course }) {
         <div className="flex flex-col gap-1 border-t border-black/10 p-2 dark:border-white/15">
           {mode === "menu" && (
             <>
-              <button type="button" className={menuButton} onClick={() => setMode("rename")}>
-                이름 변경
-              </button>
-              <button type="button" className={`${menuButton} text-red-600`} onClick={() => setMode("confirmDelete")}>
-                삭제
-              </button>
+              {/* 시연용 샘플 코스는 이름 변경·삭제를 할 수 없다 */}
+              {!course.isDemo && (
+                <>
+                  <button type="button" className={menuButton} onClick={() => setMode("rename")}>
+                    이름 변경
+                  </button>
+                  <button type="button" className={`${menuButton} text-red-600`} onClick={() => setMode("confirmDelete")}>
+                    삭제
+                  </button>
+                </>
+              )}
               <button type="button" className={menuButton} onClick={() => setMode("share")}>
                 공유
               </button>
