@@ -10,12 +10,14 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  colorScheme: "light", // 라이트 모드만 쓴다
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full bg-zinc-100 dark:bg-black">
+      <body className="min-h-full bg-zinc-100">
         {/* 모바일 폭(최대 448px)으로 가운데 정렬. 큰 화면에서도 휴대폰처럼 보인다 */}
         <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">
           {children}

@@ -190,7 +190,7 @@
 **API 키 관리**
 - 날씨·지도·Supabase 키는 코드에 직접 쓰지 않고 `.env` 파일에 보관한다. `.env`는 `.gitignore`에 이미 등록되어 GitHub에 올라가지 않는다.
 - Supabase 서버 전용 키와 날씨 키는 서버 쪽 코드(API)에서만 사용하고, 이름을 `NEXT_PUBLIC_`으로 시작하지 않게 만들어 브라우저에 노출하지 않는다.
-- 지도는 Leaflet(OpenStreetMap)을 쓰므로 지도 키가 없다. 대신 지도 화면에 출처(OpenStreetMap)를 표시한다.
+- 지도는 MapLibre와 OpenFreeMap(OpenStreetMap 기반 벡터 지도)을 쓰므로 지도 키가 없다. 대신 지도 화면에 출처(OpenFreeMap, OpenMapTiles, OpenStreetMap)를 표시한다.
 - Vercel에 배포할 때는 키를 Vercel의 환경변수 설정에 등록하고, 키가 노출되면 바로 폐기하고 새로 발급한다.
 
 
