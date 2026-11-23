@@ -23,6 +23,9 @@ export default function LoginButton({ userId, label, children }: { userId: strin
       router.refresh();
     } catch {
       setFailed(true);
+    } finally {
+      // Next 16은 다녀간 화면의 상태를 기억해 두었다가 돌아오면 그대로 보여 준다.
+      // 로그인 뒤에도 "누르는 중" 상태로 남으면, 로그아웃해서 돌아왔을 때 버튼이 잠겨 있게 되므로 항상 풀어 준다.
       setBusy(false);
     }
   }
