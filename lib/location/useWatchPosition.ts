@@ -8,7 +8,8 @@ export type WatchedPosition = { lat: number; lng: number; accuracy: number; time
 
 // 운동 중 위치를 계속 받는다 (PLAN 11번). 받은 위치는 화면에만 쓰고 서버에 보내지 않는다. (PRD 7번)
 // 시연 모드에서는 demoPath(코스 경로)를 따라 움직이는 가짜 위치를 빠르게 재생한다.
-// scenario(시연 모드에서만 사용): "shortcut" = 코스를 벗어나 지름길로 간다 (이탈·완주 반려 시험용)
+// scenario(시연 모드에서만 사용, 시험용):
+//   "shortcut" = 코스를 벗어나 지름길로 간다, "dropout" = 중간에 위치가 한동안 끊긴다, "lowaccuracy" = 중간에 정확도가 나빠진다
 export function useWatchPosition(enabled: boolean, demoPath: LatLng[], scenario?: string) {
   const [position, setPosition] = useState<WatchedPosition | null>(null);
 
@@ -17,7 +18,14 @@ export function useWatchPosition(enabled: boolean, demoPath: LatLng[], scenario?
 
     if (IS_DEMO) {
       const route = scenario === "shortcut" ? shortcutPath(demoPath) : demoPath;
-      const fake = simulatePositions(route, { seed: 11, noiseM: 4 });
+      let fake = simulatePositions(route, { seed: 11, noiseM: 4 });
+      if (scenario === "dropout") {
+        // 600초(10분) 동안의 위치를 빼서 끊김을 만든다. 30배속 재생이라 실제로는 20초 멈춘다
+        fake = fake.filter((_, i) => i < 60 || i >= 60 + 300);
+      }
+      if (scenario === "lowaccuracy") {
+        fake = fake.map((p, i) => (i >= 40 && i < 120 ? { ...p, accuracy: 80 } : p));
+      }
       return playPositions(fake, (p) => setPosition(p), { speedUp: 30 });
     }
 

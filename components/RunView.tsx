@@ -2,7 +2,7 @@
 
 import { distance, point } from "@turf/turf";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CourseMapLoader from "@/components/CourseMapLoader";
 import { followProgress } from "@/lib/geo/follow";
 import { formatDistanceKm } from "@/lib/format";
@@ -14,6 +14,8 @@ import { useWatchPosition } from "@/lib/location/useWatchPosition";
 const START_TOLERANCE_M = 50;
 // 코스에서 이 거리(m)보다 멀리 벗어나면 이탈을 알린다. (PRD 5번)
 const OFF_ROUTE_M = 50;
+// 이 시간(ms) 동안 위치가 들어오지 않으면 "기록이 끊겼습니다"를 알린다. (PRD 5번)
+const LOST_AFTER_MS = 15000;
 
 type RunCourse = {
   id: string;
@@ -32,8 +34,9 @@ function formatElapsed(ms: number): string {
   return h > 0 ? `${h}:${p(m)}:${p(total % 60)}` : `${p(m)}:${p(total % 60)}`;
 }
 
-// 운동 화면 (PLAN 10·11번): 시간 기록, 시작점 확인, 현재 위치와 남은 거리, 코스 이탈 알림.
-// (화면 켜짐·끊김 안내는 13번, 정확도 안내는 14번에서 추가)
+// 운동 화면 (PLAN 10·11번): 시간 기록, 시작점 확인, 현재 위치와 남은 거리, 코스 이탈 알림,
+// 화면 켜짐 안내와 기록 끊김 알림(13번), 위치 정확도 알림(14번).
+// (완주 판정은 15번에서 추가)
 export default function RunView({ course, scenario }: { course: RunCourse; scenario?: string }) {
   const [elapsedMs, setElapsedMs] = useState(0);
 
@@ -65,6 +68,37 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
     [course.path, last],
   );
 
+  // 위치 정확도가 나쁜 상태 (PLAN 14번): 그 점은 계산에서 빼고, 정확도가 좋아질 때까지 기록 확정을 보류한다
+  const lowAccuracy = watched !== null && watched.accuracy > GPS_ACCURACY_LIMIT_M;
+
+  // 기록 끊김 (PLAN 13번): 위치가 한동안 들어오지 않으면 알린다
+  const lastReceivedAt = useRef(0);
+  const [lost, setLost] = useState(false);
+  useEffect(() => {
+    lastReceivedAt.current = Date.now();
+  }, [watched]);
+  useEffect(() => {
+    if (status !== "granted") return;
+    lastReceivedAt.current = Date.now();
+    const timer = setInterval(() => setLost(Date.now() - lastReceivedAt.current > LOST_AFTER_MS), 1000);
+    return () => clearInterval(timer);
+  }, [status]);
+
+  // 화면 켜짐 유지 요청 (지원하는 브라우저만). 화면이 꺼지면 위치 기록이 끊길 수 있다
+  useEffect(() => {
+    let lock: WakeLockSentinel | null = null;
+    const request = () => {
+      navigator.wakeLock?.request("screen").then((l) => (lock = l)).catch(() => {});
+    };
+    request();
+    const onVisible = () => document.visibilityState === "visible" && request();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      lock?.release().catch(() => {});
+    };
+  }, []);
+
   // 코스에서 50m 넘게 벗어났는지 (PLAN 12번)
   const offRoute = progress !== null && progress.offRouteM > OFF_ROUTE_M;
   useEffect(() => {
@@ -73,6 +107,18 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
 
   return (
     <div className="flex w-full flex-1 flex-col">
+      <p className="bg-foreground/5 px-4 py-2 text-center text-sm">화면을 켜 두세요. 꺼지면 기록이 끊길 수 있어요.</p>
+      {lost && (
+        <div role="alert" className="bg-amber-500 px-4 py-3 text-center font-semibold text-black">
+          기록이 끊겼습니다
+        </div>
+      )}
+      {lowAccuracy && (
+        <div role="alert" className="bg-amber-500 px-4 py-3 text-center font-semibold text-black">
+          위치 정확도가 낮습니다
+          <span className="block text-sm font-normal">정확도가 좋아질 때까지 기록을 확정하지 않아요</span>
+        </div>
+      )}
       {offRoute && progress && (
         <div role="alert" className="bg-red-600 px-4 py-3 text-center font-semibold text-white">
           코스에서 벗어났어요 (코스까지 약 {Math.round(progress.offRouteM)}m)
