@@ -86,23 +86,32 @@ async function fetchDaejeon(): Promise<Weather> {
     if (fetchedAgo < REUSE_MIN * 60_000 && observedAgo <= MAX_AGE_MIN * 60_000) return cached;
   }
 
-  // 방금 시각은 자료가 아직 없을 수 있어서, 2분·5분·9분 전 시각 순서로 시도한다
-  for (const back of [2, 5, 9]) {
-    const tm2 = formatKst(new Date(now.getTime() - back * 60_000));
-    const url =
-      "https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min?" +
-      new URLSearchParams({ tm2, stn: String(STATION), disp: "0", help: "0", authKey: key });
-    try {
-      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
-      if (!res.ok) continue;
-      const weather = parseAwsMin(await res.text(), new Date(), new Date());
-      if (weather) {
-        cached = weather;
-        return weather;
+  // 방금 시각은 자료가 아직 없을 수 있고 기상청 서버가 가끔 느려서,
+  // 2분·5분·9분 전 시각을 한꺼번에 물어보고(최대 5초) 받은 것 중 가장 최근 관측값을 쓴다.
+  const results = await Promise.all(
+    [2, 5, 9].map(async (back) => {
+      const tm2 = formatKst(new Date(now.getTime() - back * 60_000));
+      const url =
+        "https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min?" +
+        new URLSearchParams({ tm2, stn: String(STATION), disp: "0", help: "0", authKey: key });
+      try {
+        const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(5000) });
+        return res.ok ? parseAwsMin(await res.text(), new Date(), new Date()) : null;
+      } catch {
+        return null;
       }
-    } catch {
-      // 다음 시각으로 다시 시도
-    }
+    }),
+  );
+  const fresh = results
+    .filter((w): w is Extract<Weather, { status: "ok" }> => w?.status === "ok")
+    .sort((a, b) => b.observedAt.localeCompare(a.observedAt))[0];
+  if (fresh) {
+    cached = fresh;
+    return fresh;
+  }
+  // 이번에 못 받았어도, 전에 받아 둔 값이 아직 10분 이내 관측이면 그 값을 쓴다 (값을 지어내지는 않는다)
+  if (cached?.status === "ok" && Date.now() - new Date(cached.observedAt).getTime() <= MAX_AGE_MIN * 60_000) {
+    return cached;
   }
   return { status: "unavailable" };
 }

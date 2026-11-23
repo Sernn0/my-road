@@ -57,35 +57,49 @@ body {
   font-size: 10px;
 }
 
-/* 메인 화면 날씨 그림 애니메이션 */
-@keyframes wx-drop {
-  0% { transform: translateY(-6px); opacity: 0; }
-  20% { opacity: 1; }
-  100% { transform: translateY(18px); opacity: 0; }
+/* 메인 화면 날씨 카드 애니메이션 (components/WeatherSky.tsx) */
+@keyframes wx-rain {
+  0% { transform: translateY(-10px); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(70px); opacity: 0; }
 }
-.wx-drop { animation: wx-drop 1.1s linear infinite; }
-@keyframes wx-cloud {
-  0%, 100% { transform: translateX(-2px); }
-  50% { transform: translateX(3px); }
+.wx-rain { animation: wx-rain 1s linear infinite; }
+@keyframes wx-drift {
+  0%, 100% { transform: translateX(-6px); }
+  50% { transform: translateX(8px); }
 }
-.wx-cloud { animation: wx-cloud 4s ease-in-out infinite; }
+.wx-drift { animation: wx-drift 9s ease-in-out infinite; }
+@keyframes wx-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+.wx-twinkle { animation: wx-twinkle 2.6s ease-in-out infinite; }
+@keyframes wx-spin {
+  to { transform: rotate(360deg); }
+}
+.wx-spin { animation: wx-spin 24s linear infinite; }
+@keyframes wx-sway {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(6deg); }
+}
+.wx-sway { animation: wx-sway 1.6s ease-in-out infinite; }
 @keyframes wx-gust {
-  0% { stroke-dashoffset: 90; opacity: 0; }
+  0% { stroke-dashoffset: 120; opacity: 0; }
   30% { opacity: 1; }
-  100% { stroke-dashoffset: -90; opacity: 0; }
+  100% { stroke-dashoffset: -120; opacity: 0; }
 }
-.wx-gust { stroke-dasharray: 60 120; animation: wx-gust 2.2s ease-in-out infinite; }
-@keyframes wx-breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+.wx-gust { stroke-dasharray: 70 150; animation: wx-gust 2.4s ease-in-out infinite; }
+@keyframes wx-mist {
+  0%, 100% { transform: translateX(-14px); }
+  50% { transform: translateX(14px); }
 }
-.wx-breathe { transform-box: fill-box; transform-origin: center; animation: wx-breathe 3.6s ease-in-out infinite; }
-@keyframes wx-float {
-  0% { transform: translateY(0); opacity: 0; }
-  25% { opacity: 0.9; }
-  100% { transform: translateY(-40px); opacity: 0; }
+.wx-mist { animation: wx-mist 7s ease-in-out infinite; }
+@keyframes wx-rise {
+  0% { transform: translateY(6px); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: translateY(-14px); opacity: 0; }
 }
-.wx-float { animation: wx-float 3.4s ease-out infinite; }
+.wx-rise { animation: wx-rise 2.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .wx-drop, .wx-cloud, .wx-gust, .wx-breathe, .wx-float { animation: none; }
+  .wx-rain, .wx-drift, .wx-twinkle, .wx-spin, .wx-sway, .wx-gust, .wx-mist, .wx-rise { animation: none; }
 }
