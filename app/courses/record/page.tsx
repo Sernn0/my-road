@@ -1,8 +1,8 @@
 import Link from "next/link";
-import CurrentLocationPanel from "@/components/CurrentLocationPanel";
+import CourseRecorder from "@/components/CourseRecorder";
 
 // 코스 기록 화면 (DESIGN.md 2번 `/courses/record`).
-// 지금은 위치 권한 요청과 현재 위치 읽기까지만 있다. (경로 수집과 "기록 마무리"는 PLAN 4·5번에서 추가)
+// 위치 권한을 확인하고 경로 수집을 시작한다. ("기록 마무리"는 PLAN 5번에서 추가)
 export default function RecordPage() {
   return (
     <>
@@ -14,7 +14,7 @@ export default function RecordPage() {
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-8">
-        <CurrentLocationPanel />
+        <CourseRecorder />
       </main>
     </>
   );

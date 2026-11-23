@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { IS_DEMO } from "./config";
 
 // 현재 위치 읽기 (PLAN 3번). 위치는 화면 상태에만 두고 서버나 저장소에 보내지 않는다. (PRD 7번)
 
@@ -20,8 +21,7 @@ export type LocationStatus =
 
 type State = { status: LocationStatus; position: CurrentLocation | null };
 
-// 시연 모드(NEXT_PUBLIC_DEMO_MODE=true)에서는 권한을 묻지 않고 한밭수목원 근처의 가짜 위치를 쓴다. (더미 데이터)
-const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+// 시연 모드에서는 권한을 묻지 않고 한밭수목원 근처의 가짜 위치를 쓴다. (더미 데이터)
 const DEMO_POSITION: CurrentLocation = { lat: 36.3667, lng: 127.389, accuracy: 10 };
 
 // 위치를 한 번 읽는다. 결과는 항상 비동기로 알려 준다.

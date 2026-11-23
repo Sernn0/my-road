@@ -1,6 +1,11 @@
 "use client";
 
-import { useCurrentLocation, type LocationStatus } from "@/lib/location/useCurrentLocation";
+import type { ReactNode } from "react";
+import {
+  useCurrentLocation,
+  type CurrentLocation,
+  type LocationStatus,
+} from "@/lib/location/useCurrentLocation";
 
 // 상태별 안내 문구. 권한 거부 문구는 PRD 5번에서 정한 그대로 쓴다.
 const MESSAGES: Record<Exclude<LocationStatus, "asking" | "granted">, { title: string; hint: string }> = {
@@ -22,7 +27,12 @@ const MESSAGES: Record<Exclude<LocationStatus, "asking" | "granted">, { title: s
   },
 };
 
-export default function CurrentLocationPanel() {
+// 위치 권한을 확인하는 화면. 위치를 읽으면 children에 현재 위치를 넘겨 본체를 그린다.
+export default function CurrentLocationPanel({
+  children,
+}: {
+  children: (position: CurrentLocation, isDemo: boolean) => ReactNode;
+}) {
   const { status, position, isDemo, retry } = useCurrentLocation();
 
   if (status === "asking") {
@@ -34,16 +44,8 @@ export default function CurrentLocationPanel() {
   }
 
   if (status === "granted" && position) {
-    return (
-      <div className="flex flex-col items-center gap-2 text-center" role="status">
-        <p className="text-lg font-semibold">현재 위치를 확인했어요</p>
-        <p className="font-mono text-sm text-foreground/70">
-          위도 {position.lat.toFixed(5)} · 경도 {position.lng.toFixed(5)}
-        </p>
-        <p className="text-sm text-foreground/60">정확도 약 {Math.round(position.accuracy)}m</p>
-        {isDemo && <p className="text-sm font-medium text-emerald-600">시연용 위치예요</p>}
-      </div>
-    );
+    // 위치를 읽었으면 화면 본체를 보여 준다
+    return <>{children(position, isDemo)}</>;
   }
 
   const message = MESSAGES[status as keyof typeof MESSAGES];
