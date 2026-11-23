@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import CourseMapLoader from "@/components/CourseMapLoader";
+import ShareButton from "@/components/ShareButton";
 import WeatherCard from "@/components/WeatherCard";
 import { getCourse } from "@/lib/courses/queries";
 import { formatDistanceKm } from "@/lib/format";
@@ -22,10 +23,11 @@ async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["pa
           <h1 className="truncate text-lg font-bold">{course.name}</h1>
           <p className="text-sm text-foreground/60">{formatDistanceKm(course.distanceKm)}</p>
         </div>
+        <ShareButton courseId={course.id} courseName={course.name} />
       </header>
 
       <main className="flex flex-1 flex-col">
-        <div className="h-[55dvh] min-h-72 w-full">
+        <div className="isolate h-[55dvh] min-h-72 w-full">
           <CourseMapLoader path={course.path} />
         </div>
 

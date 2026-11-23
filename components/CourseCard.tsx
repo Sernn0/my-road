@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import SharePanel from "@/components/SharePanel";
 import type { Course } from "@/lib/types";
 import { formatDistanceKm } from "@/lib/format";
 
-type Mode = "closed" | "menu" | "rename" | "confirmDelete";
+type Mode = "closed" | "menu" | "rename" | "confirmDelete" | "share";
 
 // 코스 목록의 카드 한 장: 이름·거리(km), 누르면 출발 전 확인 화면으로 간다.
-// 오른쪽 설정 버튼에서 이름 변경, 삭제, 공유를 고를 수 있다. (공유는 nice 기능이라 아직 준비 중)
+// 오른쪽 설정 버튼에서 이름 변경, 삭제, 공유를 고를 수 있다.
 export default function CourseCard({ course }: { course: Course }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("closed");
@@ -76,10 +77,14 @@ export default function CourseCard({ course }: { course: Course }) {
               <button type="button" className={`${menuButton} text-red-600`} onClick={() => setMode("confirmDelete")}>
                 삭제
               </button>
-              <button type="button" className={`${menuButton} text-foreground/40`} disabled>
-                공유 (준비 중)
+              <button type="button" className={menuButton} onClick={() => setMode("share")}>
+                공유
               </button>
             </>
+          )}
+
+          {mode === "share" && (
+            <SharePanel courseId={course.id} courseName={course.name} onClose={() => setMode("closed")} />
           )}
 
           {mode === "rename" && (

@@ -217,7 +217,7 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
           코스에서 벗어났어요 (코스까지 약 {Math.round(progress.offRouteM)}m)
         </div>
       )}
-      <div className="h-[42dvh] min-h-60 w-full">
+      <div className="isolate h-[42dvh] min-h-60 w-full">
         <CourseMapLoader path={course.path} current={last ? [last.lat, last.lng] : null} />
       </div>
 
