@@ -217,3 +217,16 @@ body {
   .xp-fill, .pop-in, .rise-in, .medal-bob, .photocard-in, .card-shimmer { animation: none; }
   .photocard-shine::after { display: none; }
 }
+
+/* 로고: 로의 ㄹ(길)이 그려지듯 나타나고, 가운데 점선과 도착점이 뒤따라 나온다 */
+@keyframes logo-draw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+.logo-draw { animation: logo-draw 1s cubic-bezier(0.6, 0, 0.3, 1) 0.3s both; }
+@keyframes logo-fade { from { opacity: 0; } to { opacity: 1; } }
+.logo-dash { animation: logo-fade 0.4s ease-out 1.2s both; }
+.logo-pop { animation: pop-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 1.25s both; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .logo-draw, .logo-dash, .logo-pop { animation: none; }
+}

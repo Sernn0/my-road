@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { avatarArt } from "@/components/Avatar";
 import { Flame } from "@/components/icons";
+import { LogoMark, LogoWordmark } from "@/components/Logo";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getCompletion } from "@/lib/completions/queries";
 import { formatDateTime, formatDistanceKm, formatDuration, formatPace } from "@/lib/format";
@@ -71,7 +72,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/og/[complet
 
   // 이미지에 쓰는 글자만 담은 글꼴 조각을 받아 온다 (굵기 2가지)
   const text = [
-    "MY ROAD", "COMPLETE", "FINISH", "마이로드에서 완주한 기록", summary.courseName, when, distance, xpText, streakText,
+    "COMPLETE", "FINISH", "마이로드에서 완주한 기록", summary.courseName, when, distance, xpText, streakText,
     ...stats.flat(), user?.nickname ?? "", info?.title ?? "", "0123456789.:+-'\"()·",
   ].join("");
   const [bold, black] = await Promise.all([loadKoreanFont(text, 700), loadKoreanFont(text, 900)]);
@@ -115,11 +116,8 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/og/[complet
           {/* 위: 로고 + 완주 표시 */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <svg width="44" height="44" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="12" fill="#059669" />
-                <path d="M6 16c2-6 5 0 7-5s3-3 5-4" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
-              </svg>
-              <div style={{ display: "flex", fontSize: 36, fontWeight: 900, letterSpacing: 6, color: "#059669" }}>MY ROAD</div>
+              {LogoMark({ size: 72, id: "card" })}
+              {LogoWordmark({ height: 50 })}
             </div>
             <div
               style={{

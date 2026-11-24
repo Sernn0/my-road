@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Avatar from "@/components/Avatar";
 import LoginButton from "@/components/LoginButton";
+import { LogoMark, LogoWordmark } from "@/components/Logo";
 import UserStats from "@/components/UserStats";
 import { listUsers } from "@/lib/auth/current-user";
 
@@ -43,8 +44,13 @@ export default function LoginPage() {
       {/* 위 여백을 아래보다 작게 두어 앱 이름이 화면 가운데보다 조금 위에 오게 한다 */}
       <div className="flex-[0.8]" />
       <div className="splash-in flex flex-col items-center gap-2 text-center">
-        <h1 className="text-5xl font-extrabold tracking-tight text-emerald-600">마이로드</h1>
-        <p className="text-sm text-foreground/60">나만의 운동 코스를 기록하고 따라가요</p>
+        <div className="pop-in">
+          <LogoMark size={76} id="splash" />
+        </div>
+        <h1 className="mt-3">
+          <LogoWordmark height={50} animate />
+        </h1>
+        <p className="mt-1 text-sm text-foreground/60">나만의 운동 코스를 기록하고 따라가요</p>
       </div>
 
       <section aria-label="테스트 계정" className="splash-in-late mt-14 flex w-full flex-col items-center gap-3">

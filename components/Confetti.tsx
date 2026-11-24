@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-// 축하 폭죽: 화면 왼쪽 아래와 오른쪽 아래 모서리에서 색종이를 조금씩, 불규칙한 간격으로 쏘아 올린다.
+// 축하 폭죽: 화면 왼쪽 위와 오른쪽 위 모서리에서 색종이를 조금씩, 불규칙한 간격으로 뿌린다.
 // 화면을 누르는 데 방해되지 않게 클릭은 통과시키고, "동작 줄이기" 설정을 켠 기기에서는 쏘지 않는다.
 
 const COLORS = ["#10B981", "#34D399", "#FBBF24", "#F472B6", "#60A5FA", "#A78BFA", "#FB7185"];
@@ -44,17 +44,17 @@ export default function Confetti() {
     resize();
     window.addEventListener("resize", resize);
 
-    // 한쪽 모서리에서 count개를 위쪽 안쪽으로 쏜다
+    // 위쪽 한 모서리에서 count개를 화면 안쪽으로 쏜다. 처음엔 옆으로 날아가다가 중력으로 흩날리며 떨어진다.
     const burst = (side: "left" | "right", count: number) => {
       for (let i = 0; i < count; i++) {
-        const angle = ((60 + Math.random() * 25) * Math.PI) / 180; // 수평에서 60~85도 위로
+        const angle = ((-15 + Math.random() * 45) * Math.PI) / 180; // 수평에서 15도 위 ~ 30도 아래
         const speed = 420 + Math.random() * 360;
         const dir = side === "left" ? 1 : -1;
         pieces.push({
           x: side === "left" ? -4 : width + 4,
-          y: height + 4,
+          y: -4,
           vx: Math.cos(angle) * speed * dir * (0.35 + Math.random() * 0.4),
-          vy: -Math.sin(angle) * speed,
+          vy: Math.sin(angle) * speed * 0.5,
           rot: Math.random() * Math.PI,
           vr: (Math.random() - 0.5) * 12,
           w: 6 + Math.random() * 5,
