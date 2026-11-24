@@ -136,28 +136,30 @@ export default function WeatherSky({ scene }: { scene: Scene }) {
         );
       })}
 
-      {/* 먼 언덕과 도시 */}
-      <path d={`M0 128 Q60 104 120 120 T240 112 T360 118 V${H} H0Z`} fill={colors.groundFar} />
-      <g fill={colors.groundFar} opacity="0.95">
+      {/* 먼 도시: 건물 아래쪽을 길게 내려 먼 언덕 뒤에 세운다 (언덕이 밑동을 가려서 땅에 서 있는 것처럼 보인다) */}
+      <g fill={colors.groundFar} opacity="0.72">
         {[
-          [196, 96, 12, 24],
-          [211, 88, 10, 32],
-          [224, 100, 14, 20],
-          [241, 92, 9, 28],
-          [253, 102, 12, 18],
-        ].map(([x, y, w, h]) => (
-          <rect key={x} x={x} y={y} width={w} height={h} rx="1.5" />
+          [196, 96, 12],
+          [211, 88, 10],
+          [224, 100, 14],
+          [241, 92, 9],
+          [253, 102, 12],
+        ].map(([x, y, w]) => (
+          <rect key={x} x={x} y={y} width={w} height={H - y} rx="1.5" />
         ))}
       </g>
       {isNight &&
         [
           [199, 102],
           [214, 95],
-          [214, 106],
+          [214, 103],
           [228, 106],
           [244, 99],
-          [256, 108],
+          [256, 107],
         ].map(([x, y]) => <rect key={`${x}-${y}`} x={x} y={y} width="3" height="3" fill="#FDE68A" className="wx-twinkle" style={{ animationDuration: "4s" }} />)}
+
+      {/* 먼 언덕 */}
+      <path d={`M0 128 Q60 104 120 120 T240 112 T360 118 V${H} H0Z`} fill={colors.groundFar} />
 
       {/* 안개 띠 (습도 높음) */}
       {humid && (

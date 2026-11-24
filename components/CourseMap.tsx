@@ -46,6 +46,7 @@ export default function CourseMap({
   heading = 0,
   progressKm = 0,
   padding,
+  attribution = true,
 }: {
   path: [number, number][];
   current?: [number, number] | null; // 운동 중 현재 위치
@@ -53,6 +54,7 @@ export default function CourseMap({
   heading?: number; // 가는 방향 (북쪽 0도, 시계 방향)
   progressKm?: number; // 코스 위에서 지금까지 온 거리
   padding?: Partial<PaddingOptions>; // 지도 위에 올린 버튼·카드 자리
+  attribution?: boolean; // false면 지도 기본 출처 표시를 끈다 (대신 화면에서 MapAttribution을 카드 위에 둔다)
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -79,7 +81,7 @@ export default function CourseMap({
       touchPitch: false,
       scrollZoom: mode === "overview",
       localIdeographFontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif", // 한글은 기기 글꼴로
-      attributionControl: { compact: true },
+      attributionControl: attribution ? { compact: true } : false,
     });
     map.touchZoomRotate.disableRotation();
     if (mode === "overview") map.addControl(new NavigationControl({ showCompass: false }), "top-right");

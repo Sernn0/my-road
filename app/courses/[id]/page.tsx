@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import CourseMapLoader from "@/components/CourseMapLoader";
+import MapAttribution from "@/components/MapAttribution";
 import { getCourse } from "@/lib/courses/queries";
 import { formatDistanceKm } from "@/lib/format";
 
@@ -16,7 +17,7 @@ async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["pa
     <div className="relative h-dvh w-full overflow-hidden">
       {/* 지도: 아래 카드와 위 버튼 자리를 비워 두고 코스 전체를 맞춘다 */}
       <div className="absolute inset-0">
-        <CourseMapLoader path={course.path} mode="overview" padding={{ top: 90, bottom: 280, left: 40, right: 40 }} />
+        <CourseMapLoader path={course.path} mode="overview" padding={{ top: 90, bottom: 280, left: 40, right: 40 }} attribution={false} />
       </div>
 
       {/* 위: 뒤로 가기 (지도 위에 떠 있는 둥근 버튼) */}
@@ -33,6 +34,7 @@ async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["pa
 
       {/* 아래: 코스 정보 카드 + 운동 시작 버튼 */}
       <section aria-label="코스 정보" className="sheet-up absolute inset-x-0 bottom-0 px-3 pb-5">
+        <MapAttribution />
         <div className="rounded-3xl bg-white/95 p-4 shadow-[0_-4px_24px_rgb(0_0_0/0.12)] ring-1 ring-black/5 backdrop-blur">
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-black/10" />
           <div className="flex items-start justify-between gap-3">

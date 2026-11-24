@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import CourseMapLoader from "@/components/CourseMapLoader";
+import MapAttribution from "@/components/MapAttribution";
 import { FINISH_RADIUS_M, judgeCompletion } from "@/lib/geo/completion";
 import { followProgress, routeBearingAt } from "@/lib/geo/follow";
 import { formatDistanceKm, formatPace } from "@/lib/format";
@@ -237,6 +238,7 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
           heading={heading}
           progressKm={alongKm}
           padding={{ top: 330, bottom: 250, left: 40, right: 40 }} // 내 위치가 화면 아래쪽에 와서 앞길이 넓게 보이도록
+          attribution={false}
         />
       </div>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-white/85 via-white/40 to-transparent" />
@@ -286,6 +288,7 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
 
       {/* 아래: 운동 정보 */}
       <section aria-label="운동 정보" className="sheet-up absolute inset-x-0 bottom-0 px-3 pb-5">
+        <MapAttribution />
         <div className="rounded-3xl bg-white/95 p-4 shadow-[0_-4px_24px_rgb(0_0_0/0.12)] ring-1 ring-black/5 backdrop-blur">
           <div className="flex items-end justify-between">
             <div>
