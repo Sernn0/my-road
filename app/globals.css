@@ -159,3 +159,61 @@ body {
   50% { opacity: 0.25; }
 }
 .rec-dot { animation: rec-blink 1.4s ease-in-out infinite; }
+
+/* 완주 화면: 경험치 막대 차오름, 튀어나오기, 아래에서 떠오르기, 메달 흔들림 */
+@keyframes xp-fill {
+  from { width: var(--xp-from); }
+  to { width: var(--xp-to); }
+}
+.xp-fill { animation: xp-fill 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.6s both; }
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.5); }
+  60% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pop-in { animation: pop-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in { animation: rise-in 0.5s ease-out both; }
+@keyframes medal-bob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-6px) rotate(4deg); }
+}
+.medal-bob { animation: medal-bob 3s ease-in-out infinite; transform-origin: 50% 0; }
+
+/* 기록 이미지 미리보기: 포토카드가 살짝 기울어진 채 들어오고, 무지갯빛 광택이 지나간다 */
+@keyframes photocard-in {
+  from { opacity: 0; transform: translateY(40px) rotate(-8deg) scale(0.9); }
+  to { opacity: 1; transform: rotate(-2deg); }
+}
+.photocard-in { animation: photocard-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.photocard-shine { position: relative; overflow: hidden; }
+.photocard-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.55) 45%, rgb(196 181 253 / 0.35) 50%, rgb(255 255 255 / 0.5) 55%, transparent 70%);
+  transform: translateX(-120%);
+  animation: photocard-gloss 3.2s ease-in-out 0.8s infinite;
+  pointer-events: none;
+}
+@keyframes photocard-gloss {
+  0% { transform: translateX(-120%); }
+  45%, 100% { transform: translateX(120%); }
+}
+@keyframes card-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.card-shimmer {
+  background: linear-gradient(90deg, #ecfdf5 25%, #ffffff 50%, #ecfdf5 75%);
+  background-size: 200% 100%;
+  animation: card-shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-fill, .pop-in, .rise-in, .medal-bob, .photocard-in, .card-shimmer { animation: none; }
+  .photocard-shine::after { display: none; }
+}

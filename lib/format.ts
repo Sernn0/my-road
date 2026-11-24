@@ -21,3 +21,30 @@ export function formatDate(iso: string): string {
     day: "numeric",
   }).format(new Date(iso));
 }
+
+// 평균 페이스: 1km당 걸린 시간 (예: 6'05")
+export function formatPace(secPerKm: number): string {
+  const total = Math.round(secPerKm);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}'${String(s).padStart(2, "0")}"`;
+}
+
+// 한국 시간 기준 날짜와 시각 (예: 2026.11.24 (화) 오후 7:42)
+export function formatDateTime(iso: string): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}.${parts.month}.${parts.day} (${parts.weekday}) ${parts.dayPeriod} ${parts.hour}:${parts.minute}`;
+}

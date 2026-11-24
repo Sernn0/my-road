@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { addDays, kstDate } from "@/lib/progress/streak";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 // 더미 로그인 (PLAN 17번). 실제 인증이 아니라, 고른 더미 계정 번호를 쿠키에 기억해 두는 것뿐이다. (PRD 6번)
@@ -29,8 +30,17 @@ export function toProfile(row: UserRow): UserProfile {
     nickname: row.nickname,
     totalXp: row.total_xp,
     streakCount: row.streak_count,
-    lastGoalDate: row.last_goal_date,
+    lastGoalDate: keepTestStreak(row.id, row.last_goal_date),
   };
+}
+
+// 시연용 테스트 계정은 며칠 동안 완주하지 않아도 연속 달성(streak)이 끊기지 않게 한다.
+// 마지막 달성일이 어제보다 오래됐으면 "어제"로 보고 계산한다. (DB 값은 바꾸지 않고, 읽을 때만 보정)
+// 그래서 화면에는 원래 연속 일수가 보이고, 오늘 완주하면 +1이 된다. 일반 계정은 원래 규칙대로 끊긴다.
+function keepTestStreak(userId: string, lastGoalDate: string | null): string | null {
+  if (!lastGoalDate || !TEST_ACCOUNT_IDS.includes(userId)) return lastGoalDate;
+  const yesterday = addDays(kstDate(), -1);
+  return lastGoalDate < yesterday ? yesterday : lastGoalDate;
 }
 
 export const USER_COLUMNS = "id, nickname, total_xp, streak_count, last_goal_date";

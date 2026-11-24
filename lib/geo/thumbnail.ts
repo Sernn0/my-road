@@ -4,9 +4,12 @@
 
 export const THUMB_W = 160;
 export const THUMB_H = 120;
-const PAD = 18; // 좌우 여백
-const PAD_TOP = 42; // 카드 위쪽의 "시연" 표시와 ⋯ 버튼에 선이 가리지 않도록 위 여백을 크게 둔다
-const PAD_BOTTOM = 14;
+// 여백: "card"는 코스 카드용(위쪽 "시연" 표시와 ⋯ 버튼에 선이 가리지 않도록 위 여백을 크게), "photo"는 기록 이미지용(고르게)
+export type ThumbLayout = "card" | "photo";
+const PADS: Record<ThumbLayout, { side: number; top: number; bottom: number }> = {
+  card: { side: 18, top: 42, bottom: 14 },
+  photo: { side: 20, top: 20, bottom: 20 },
+};
 const MAX_POINTS = 80; // 점이 많으면 고르게 골라 80개까지만 쓴다
 
 // 바탕 지도의 층별 SVG 모양 (lib/map/thumb-basemap.ts에서 만든다)
@@ -35,8 +38,9 @@ export function mercator(lng: number, lat: number): [number, number] {
 // 썸네일 틀: 메르카토르 좌표를 썸네일 좌표로 바꾸는 방법과, 썸네일 전체가 덮는 메르카토르 범위
 export type ThumbFrame = { scale: number; minX: number; minY: number; offX: number; offY: number };
 
-export function frameFor(path: [number, number][]): ThumbFrame | null {
+export function frameFor(path: [number, number][], layout: ThumbLayout = "card"): ThumbFrame | null {
   if (path.length < 2) return null;
+  const { side: PAD, top: PAD_TOP, bottom: PAD_BOTTOM } = PADS[layout];
   const pts = path.map(([lat, lng]) => mercator(lng, lat));
   const minX = Math.min(...pts.map((p) => p[0]));
   const minY = Math.min(...pts.map((p) => p[1]));
@@ -63,8 +67,8 @@ export function frameBounds(frame: ThumbFrame): [number, number, number, number]
   return [x0, y0, x0 + THUMB_W / frame.scale, y0 + THUMB_H / frame.scale];
 }
 
-export function courseThumbnail(path: [number, number][]): Thumbnail | null {
-  const frame = frameFor(path);
+export function courseThumbnail(path: [number, number][], layout: ThumbLayout = "card"): Thumbnail | null {
+  const frame = frameFor(path, layout);
   if (!frame) return null;
   const step = Math.max(1, Math.ceil(path.length / MAX_POINTS));
   const picked = path.filter((_, i) => i % step === 0);

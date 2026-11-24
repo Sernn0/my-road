@@ -66,6 +66,22 @@ function Bear() {
   );
 }
 
+// 캐릭터 그림 (svg 안쪽 모양, viewBox 0 0 100 100). 기록 이미지(서버에서 그리는 그림)에서도 쓴다.
+export function avatarArt(userId: string, nickname: string) {
+  const character = CHARACTER_BY_USER[userId];
+  if (character === "bunny") return Bunny();
+  if (character === "sprout") return Sprout();
+  if (character === "bear") return Bear();
+  return (
+    <>
+      <circle cx="50" cy="50" r="50" fill="#D1D5DB" />
+      <text x="50" y="62" textAnchor="middle" fontSize="36" fontWeight="700" fill="#374151">
+        {nickname.slice(0, 1)}
+      </text>
+    </>
+  );
+}
+
 export default function Avatar({
   userId,
   nickname,
@@ -75,7 +91,6 @@ export default function Avatar({
   nickname: string;
   size?: number;
 }) {
-  const character = CHARACTER_BY_USER[userId];
   return (
     <svg
       width={size}
@@ -85,17 +100,7 @@ export default function Avatar({
       aria-label={`${nickname} 프로필 이미지`}
       className="shrink-0 rounded-full"
     >
-      {character === "bunny" && <Bunny />}
-      {character === "sprout" && <Sprout />}
-      {character === "bear" && <Bear />}
-      {!character && (
-        <>
-          <circle cx="50" cy="50" r="50" fill="#D1D5DB" />
-          <text x="50" y="62" textAnchor="middle" fontSize="36" fontWeight="700" fill="#374151">
-            {nickname.slice(0, 1)}
-          </text>
-        </>
-      )}
+      {avatarArt(userId, nickname)}
     </svg>
   );
 }

@@ -9,6 +9,7 @@ export type CompletionSummary = {
   durationSec: number;
   distanceKm: number;
   xp: number; // 이번 완주로 받은 경험치
+  coursePath: [number, number][] | null; // 코스 모양 (저장된 코스 경로. 실제로 달린 궤적이 아니다)
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,20 +20,22 @@ export async function getCompletion(id: string): Promise<CompletionSummary | nul
   if (!userId || !UUID.test(id)) return null;
   const { data, error } = await createServerSupabase()
     .from("completions")
-    .select("id, completed_at, duration_sec, distance_km, xp, courses(name)")
+    .select("id, completed_at, duration_sec, distance_km, xp, courses(name, path)")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error("완주 기록을 불러오지 못했습니다");
   if (!data) return null;
-  const course = data.courses as unknown as { name: string } | { name: string }[] | null;
-  const courseName = Array.isArray(course) ? course[0]?.name : course?.name;
+  type CourseRow = { name: string; path: [number, number][] | null };
+  const joined = data.courses as unknown as CourseRow | CourseRow[] | null;
+  const course = Array.isArray(joined) ? joined[0] : joined;
   return {
     id: data.id as string,
-    courseName: courseName ?? "삭제된 코스",
+    courseName: course?.name ?? "삭제된 코스",
     completedAt: data.completed_at as string,
     durationSec: data.duration_sec as number,
     distanceKm: Number(data.distance_km),
     xp: data.xp as number,
+    coursePath: course?.path ?? null,
   };
 }

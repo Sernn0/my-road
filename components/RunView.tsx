@@ -8,7 +8,7 @@ import BottomSheet from "@/components/BottomSheet";
 import CourseMapLoader from "@/components/CourseMapLoader";
 import { FINISH_RADIUS_M, judgeCompletion } from "@/lib/geo/completion";
 import { followProgress, routeBearingAt } from "@/lib/geo/follow";
-import { formatDistanceKm } from "@/lib/format";
+import { formatDistanceKm, formatPace } from "@/lib/format";
 import { GPS_ACCURACY_LIMIT_M } from "@/lib/location/config";
 import { useCurrentLocation } from "@/lib/location/useCurrentLocation";
 import { useWatchPosition } from "@/lib/location/useWatchPosition";
@@ -348,13 +348,6 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
       )}
     </div>
   );
-}
-
-// 1km 페이스: 초 → "6'05\""
-function formatPace(secPerKm: number): string {
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60);
-  return `${m}'${String(s).padStart(2, "0")}"`;
 }
 
 // 나침반: 지도가 가는 방향으로 돌아가므로, 북쪽(N) 글자도 함께 돌아 실제 북쪽을 가리킨다. 가운데 화살표는 내가 가는 방향(위).

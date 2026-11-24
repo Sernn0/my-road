@@ -2,7 +2,7 @@ import "server-only";
 import { VectorTile } from "@mapbox/vector-tile";
 import { cacheLife } from "next/cache";
 import { PbfReader } from "pbf";
-import { frameBounds, frameFor, project, THUMB_H, THUMB_W, type ThumbBasemap, type ThumbFrame } from "@/lib/geo/thumbnail";
+import { frameBounds, frameFor, project, THUMB_H, THUMB_W, type ThumbBasemap, type ThumbFrame, type ThumbLayout } from "@/lib/geo/thumbnail";
 
 // 썸네일용 아주 간략한 바탕 지도 (큰 길, 물, 공원만). 지도 데이터는 상세 지도와 같은 OpenFreeMap이다.
 // 코스 범위에 맞는 지도 조각(타일)을 1~4장 받아서, 필요한 모양만 골라 SVG 선으로 바꾼다.
@@ -62,8 +62,8 @@ function toPath(shapes: Shape[], frame: ThumbFrame): string {
   return parts.join(" ");
 }
 
-async function buildBasemap(path: [number, number][]): Promise<ThumbBasemap | null> {
-  const frame = frameFor(path);
+async function buildBasemap(path: [number, number][], layout: ThumbLayout): Promise<ThumbBasemap | null> {
+  const frame = frameFor(path, layout);
   if (!frame) return null;
   const template = await tileTemplate();
   const tiles = pickTiles(frameBounds(frame));
@@ -105,12 +105,13 @@ async function buildBasemap(path: [number, number][]): Promise<ThumbBasemap | nu
 }
 
 // 코스별 바탕 지도. key(코스 번호 + 거리)가 같으면 저장해 둔 결과를 쓴다.
-export async function thumbBasemap(key: string, path: [number, number][]): Promise<ThumbBasemap | null> {
+// layout은 썸네일 여백 방식 (코스 카드용 "card", 기록 이미지용 "photo")
+export async function thumbBasemap(key: string, path: [number, number][], layout: ThumbLayout = "card"): Promise<ThumbBasemap | null> {
   "use cache";
   cacheLife("weeks");
   void key; // 저장 구분용 (경로가 같으면 결과도 같다)
   try {
-    return await buildBasemap(path);
+    return await buildBasemap(path, layout);
   } catch {
     return null;
   }

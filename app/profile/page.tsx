@@ -5,7 +5,8 @@ import Avatar from "@/components/Avatar";
 import { LevelBadge } from "@/components/icons";
 import LogoutButton from "@/components/LogoutButton";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { levelInfo, MAX_XP } from "@/lib/progress/level";
+import XpBar from "@/components/XpBar";
+import { levelInfo } from "@/lib/progress/level";
 import { effectiveStreak, kstDate } from "@/lib/progress/streak";
 
 // 프로필 화면 (DESIGN.md 2번 `/profile`, nice): 칭호·레벨 구간, 경험치, 연속 달성(streak)
@@ -15,7 +16,6 @@ async function Profile() {
 
   const info = levelInfo(user.totalXp);
   const streak = effectiveStreak(user, kstDate());
-  const percent = info.maxed ? 100 : Math.round((info.xpIntoSection / info.xpPerSection) * 100);
 
   return (
     <main className="flex flex-1 flex-col gap-5 px-4 py-6">
@@ -38,14 +38,9 @@ async function Profile() {
             {user.totalXp.toLocaleString("ko-KR")}점
           </span>
         </div>
-        <div className="mt-3 h-3 overflow-hidden rounded-full bg-black/10 dark:bg-white/15" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-emerald-600" style={{ width: `${percent}%` }} />
+        <div className="mt-3">
+          <XpBar totalXp={user.totalXp} />
         </div>
-        <p className="mt-2 text-sm text-foreground/60">
-          {info.maxed
-            ? `모든 구간을 채웠어요 (${MAX_XP.toLocaleString("ko-KR")}점). 경험치는 계속 쌓여요.`
-            : `다음 구간까지 ${info.xpToNext}점 (${info.xpIntoSection}/${info.xpPerSection})`}
-        </p>
       </section>
 
       <section aria-label="연속 달성" className="rounded-2xl border border-black/10 px-4 py-4 dark:border-white/15">
