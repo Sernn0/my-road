@@ -6,6 +6,7 @@ import { Flame } from "@/components/icons";
 import MapAttribution from "@/components/MapAttribution";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getCourseRecord } from "@/lib/completions/queries";
+import { LOOP_DISABLED_MESSAGE } from "@/lib/courses/availability";
 import { getCourse } from "@/lib/courses/queries";
 import { formatDistanceKm, formatDuration, formatMonthDay } from "@/lib/format";
 import { isLoopCourse } from "@/lib/geo/follow";
@@ -122,15 +123,23 @@ async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["pa
           </div>
           <p className="mt-2 text-xs text-foreground/50">출발 지점에 도착하면 운동을 시작하세요.</p>
 
-          <Link
-            href={`/courses/${course.id}/run`}
-            className="btn-shine mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-lg font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-[0.98] active:bg-emerald-700"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M8 5v14l11-7Z" fill="currentColor" />
-            </svg>
-            운동 시작
-          </Link>
+          {course.disabled ? (
+            // 순환 코스 임시 비활성화: 시작 버튼 대신 이유를 보여 준다
+            <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-center ring-1 ring-amber-200">
+              <p className="font-semibold text-amber-700">지금은 시작할 수 없는 코스예요</p>
+              <p className="mt-1 text-xs text-amber-700/80">{LOOP_DISABLED_MESSAGE}</p>
+            </div>
+          ) : (
+            <Link
+              href={`/courses/${course.id}/run`}
+              className="btn-shine mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-lg font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-[0.98] active:bg-emerald-700"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 5v14l11-7Z" fill="currentColor" />
+              </svg>
+              운동 시작
+            </Link>
+          )}
         </div>
       </section>
     </div>

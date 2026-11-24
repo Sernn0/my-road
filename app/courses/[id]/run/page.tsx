@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import RunView from "@/components/RunView";
 import { getCurrentUserId } from "@/lib/auth/current-user";
@@ -17,6 +17,8 @@ async function RunScreen({
   const { scenario } = await searchParams; // 시연 모드 시험용: ?scenario=shortcut
   const course = await getCourse(id);
   if (!course) notFound();
+  // 지금 고를 수 없는 코스(순환 코스 임시 비활성화)는 운동을 시작하지 않고 운동 준비 화면으로 돌려보낸다
+  if (course.disabled) redirect(`/courses/${course.id}`);
   // 이 코스의 내 최고 기록 (운동 중 "최고 기록보다 몇 초 빠른지" 비교에 쓴다)
   const userId = await getCurrentUserId();
   const record = userId ? await getCourseRecord(course.id, userId) : null;

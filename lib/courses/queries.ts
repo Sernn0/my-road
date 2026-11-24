@@ -1,4 +1,5 @@
 import "server-only";
+import { isCourseDisabled } from "@/lib/courses/availability";
 import { courseThumbnail } from "@/lib/geo/thumbnail";
 import { thumbBasemap } from "@/lib/map/thumb-basemap";
 import type { Course } from "@/lib/types";
@@ -13,7 +14,7 @@ export async function listCourses(userId: string): Promise<Course[]> {
     : query.eq("user_id", userId)
   ).order("created_at", { ascending: false });
   if (error) throw new Error("코스 목록을 불러오지 못했습니다");
-  return Promise.all(
+  const courses = await Promise.all(
     (data ?? []).map(async (row) => {
       const path = row.path as [number, number][];
       const thumbnail = courseThumbnail(path);
@@ -25,9 +26,12 @@ export async function listCourses(userId: string): Promise<Course[]> {
         distanceKm: Number(row.distance_km),
         isDemo: row.is_demo as boolean,
         thumbnail: thumbnail ? { ...thumbnail, basemap } : null,
+        disabled: isCourseDisabled(path),
       };
     }),
   );
+  // 지금 고를 수 없는 코스(순환 코스 임시 비활성화)는 맨 아래로 보낸다. 나머지 순서는 그대로
+  return [...courses.filter((c) => !c.disabled), ...courses.filter((c) => c.disabled)];
 }
 
 export type CourseDetail = Course & {
@@ -56,5 +60,6 @@ export async function getCourse(id: string): Promise<CourseDetail | null> {
     startLat: data.start_lat as number,
     startLng: data.start_lng as number,
     isDemo: data.is_demo as boolean,
+    disabled: isCourseDisabled(data.path as [number, number][]),
   };
 }

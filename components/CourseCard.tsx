@@ -7,13 +7,15 @@ import BottomSheet from "@/components/BottomSheet";
 import CourseThumbnail from "@/components/CourseThumbnail";
 import SharePanel from "@/components/SharePanel";
 import { MoreIcon } from "@/components/icons";
+import { LOOP_DISABLED_MESSAGE, LOOP_DISABLED_TITLE } from "@/lib/courses/availability";
 import { formatDistanceKm } from "@/lib/format";
 import type { Course } from "@/lib/types";
 
-type Mode = "closed" | "menu" | "rename" | "confirmDelete" | "share";
+type Mode = "closed" | "menu" | "rename" | "confirmDelete" | "share" | "blocked";
 
 // 코스 카드 (메인 화면, 한 줄에 2개): 코스 모양 썸네일, 이름, 거리(km). 누르면 출발 전 확인 화면으로 간다.
 // 오른쪽 위 ⋯ 버튼에서 공유, 이름 변경, 삭제를 고른다. (시연 코스는 공유만)
+// 지금 고를 수 없는 코스(순환 코스 임시 비활성화)는 흐리게 보여 주고, 누르면 이유만 알려 준다.
 export default function CourseCard({ course }: { course: Course }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("closed");
@@ -52,21 +54,34 @@ export default function CourseCard({ course }: { course: Course }) {
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-black/10 bg-background shadow-sm dark:border-white/10">
-      <Link href={`/courses/${course.id}`} className="block active:opacity-80">
-        <div className="aspect-[4/3] w-full bg-emerald-50 text-foreground dark:bg-emerald-950/40">
-          <CourseThumbnail thumbnail={course.thumbnail} label={course.name} />
-        </div>
-        <div className="flex flex-col gap-0.5 px-3 pb-3 pt-2">
-          <span className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-5">{course.name}</span>
-          <span className="text-xs text-foreground/60">{formatDistanceKm(course.distanceKm)}</span>
-        </div>
-      </Link>
-
-      {course.isDemo && (
-        <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white">
-          시연
-        </span>
+      {course.disabled ? (
+        <button type="button" onClick={() => setMode("blocked")} className="block w-full text-left" aria-label={`${course.name} (지금은 고를 수 없어요)`}>
+          <div className="opacity-50 grayscale">
+            <div className="aspect-[4/3] w-full bg-emerald-50 text-foreground dark:bg-emerald-950/40">
+              <CourseThumbnail thumbnail={course.thumbnail} label={course.name} />
+            </div>
+            <div className="flex flex-col gap-0.5 px-3 pb-3 pt-2">
+              <span className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-5">{course.name}</span>
+              <span className="text-xs text-foreground/60">{formatDistanceKm(course.distanceKm)}</span>
+            </div>
+          </div>
+        </button>
+      ) : (
+        <Link href={`/courses/${course.id}`} className="block active:opacity-80">
+          <div className="aspect-[4/3] w-full bg-emerald-50 text-foreground dark:bg-emerald-950/40">
+            <CourseThumbnail thumbnail={course.thumbnail} label={course.name} />
+          </div>
+          <div className="flex flex-col gap-0.5 px-3 pb-3 pt-2">
+            <span className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-5">{course.name}</span>
+            <span className="text-xs text-foreground/60">{formatDistanceKm(course.distanceKm)}</span>
+          </div>
+        </Link>
       )}
+
+      <div className="pointer-events-none absolute left-2 top-2 flex gap-1">
+        {course.isDemo && <span className="rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white">시연</span>}
+        {course.disabled && <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-semibold text-white">점검 중</span>}
+      </div>
       <button
         type="button"
         aria-label={`${course.name} 설정`}
@@ -78,7 +93,9 @@ export default function CourseCard({ course }: { course: Course }) {
 
       {mode !== "closed" && (
         <BottomSheet
-          title={mode === "share" ? "코스 공유" : mode === "rename" ? "이름 변경" : mode === "confirmDelete" ? "코스 삭제" : course.name}
+          title={
+            mode === "share" ? "코스 공유" : mode === "rename" ? "이름 변경" : mode === "confirmDelete" ? "코스 삭제" : mode === "blocked" ? LOOP_DISABLED_TITLE : course.name
+          }
           onClose={close}
         >
           {mode === "menu" && (
@@ -97,6 +114,15 @@ export default function CourseCard({ course }: { course: Course }) {
                   </button>
                 </>
               )}
+            </div>
+          )}
+
+          {mode === "blocked" && (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-foreground/70">{LOOP_DISABLED_MESSAGE}</p>
+              <button type="button" onClick={close} className="h-14 rounded-2xl bg-emerald-600 font-semibold text-white">
+                확인
+              </button>
             </div>
           )}
 
