@@ -139,6 +139,7 @@ export default function CourseMap({
 
     // 현재 위치·방향·진행을 지도에 반영한다
     const total = length(lineString(coords), { units: "kilometers" });
+    let lastMoveAt = performance.now();
     function apply(first = false) {
       if (!readyRef.current) return;
       const { current: cur, heading: hd, progressKm: prog } = latest.current;
@@ -165,7 +166,12 @@ export default function CourseMap({
       markerRef.current.setLngLat(at).setRotation(mode === "follow" ? 0 : hd);
       if (mode === "follow") {
         // 가는 방향이 위로 오게 돌리고, 살짝 기울여 앞쪽이 멀리 보이게 한다
-        map.easeTo({ center: at, bearing: hd, zoom: 17, pitch: 45, duration: first ? 0 : 900, padding: pad });
+        // 이동 시간은 위치가 들어오는 간격에 맞춘다 (최대 0.9초). 간격보다 길면 다음 위치가 올 때마다 이동이 처음부터
+        // 다시 시작돼 지도가 계속 뒤처진다. (시연 모드는 30배 빠르게 재생해서 위치가 0.1초 안쪽 간격으로 들어온다)
+        const now = performance.now();
+        const gap = now - lastMoveAt;
+        lastMoveAt = now;
+        map.easeTo({ center: at, bearing: hd, zoom: 17, pitch: 45, duration: first ? 0 : Math.min(900, gap), padding: pad, easing: (t) => t });
       }
     }
     applyRef.current = () => apply();

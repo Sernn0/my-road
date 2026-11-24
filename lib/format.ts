@@ -48,3 +48,14 @@ export function formatDateTime(iso: string): string {
   );
   return `${parts.year}.${parts.month}.${parts.day} (${parts.weekday}) ${parts.dayPeriod} ${parts.hour}:${parts.minute}`;
 }
+
+// 한국 시간 기준 짧은 날짜 (예: 11월 20일)
+export function formatMonthDay(iso: string): string {
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" }).format(new Date(iso));
+}
+
+// 초 → "12초" 또는 "1분 5초" (최고 기록과의 차이 표시용)
+export function formatGap(sec: number): string {
+  const s = Math.round(Math.abs(sec));
+  return s < 60 ? `${s}초` : `${Math.floor(s / 60)}분${s % 60 ? ` ${s % 60}초` : ""}`;
+}

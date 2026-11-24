@@ -8,8 +8,8 @@ import BottomSheet from "@/components/BottomSheet";
 import CourseMapLoader from "@/components/CourseMapLoader";
 import MapAttribution from "@/components/MapAttribution";
 import { FINISH_RADIUS_M, judgeCompletion } from "@/lib/geo/completion";
-import { followProgress, routeBearingAt } from "@/lib/geo/follow";
-import { formatDistanceKm, formatPace } from "@/lib/format";
+import { followProgress, isLoopCourse, routeBearingAt, type FollowProgress } from "@/lib/geo/follow";
+import { formatDistanceKm, formatGap, formatPace } from "@/lib/format";
 import { GPS_ACCURACY_LIMIT_M } from "@/lib/location/config";
 import { useCurrentLocation } from "@/lib/location/useCurrentLocation";
 import { useWatchPosition } from "@/lib/location/useWatchPosition";
@@ -20,6 +20,11 @@ const START_TOLERANCE_M = 50;
 const OFF_ROUTE_M = 50;
 // 이 시간(ms) 동안 위치가 들어오지 않으면 "기록이 끊겼습니다"를 알린다. (PRD 5번)
 const LOST_AFTER_MS = 15000;
+// 1km 통과·중간 응원 알림을 보여 주는 시간(ms)
+const CHEER_MS = 4000;
+
+// 운동 중 응원 알림 (1km 통과, 절반, 거의 도착)
+type Cheer = { key: string; emoji: string; title: string; sub: string; at: number };
 
 type RunCourse = {
   id: string;
@@ -48,7 +53,15 @@ type Outcome =
 // 운동 화면 (PLAN 10·11번): 시간 기록, 시작점 확인, 현재 위치와 남은 거리, 코스 이탈 알림,
 // 화면 켜짐 안내와 기록 끊김 알림(13번), 위치 정확도 알림(14번),
 // 도착 시 완주 판정(15번)과 완주 요약 저장(16번). 이동 경로는 이 화면 안에서만 쓰고 서버에는 보내지 않는다.
-export default function RunView({ course, scenario }: { course: RunCourse; scenario?: string }) {
+export default function RunView({
+  course,
+  bestSec,
+  scenario,
+}: {
+  course: RunCourse;
+  bestSec: number | null; // 이 코스의 내 최고 기록(초). 없으면 null
+  scenario?: string;
+}) {
   const router = useRouter();
   const [elapsedMs, setElapsedMs] = useState(0);
   const [giveUpAsk, setGiveUpAsk] = useState(false); // 운동 포기 확인 중
@@ -76,26 +89,50 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
   const [last, setLast] = useState<typeof usable>(null);
   const [trace, setTrace] = useState<[number, number][]>([]); // 지나온 위치 (기기 안에서만 사용)
   const [outcome, setOutcome] = useState<Outcome>({ kind: "running" });
+  const [progress, setProgress] = useState<FollowProgress | null>(null);
+  const [maxAlongKm, setMaxAlongKm] = useState(0); // 지금까지 코스 위에서 가장 멀리 간 거리 (되돌아가도 줄지 않는다)
+  const [splitsMs, setSplitsMs] = useState<number[]>([]); // 1km씩 통과한 순간의 소요 시간
+  const [cheer, setCheer] = useState<Cheer | null>(null);
   if (usable && usable !== last) {
     setLast(usable);
     setTrace((t) => [...t, [usable.lat, usable.lng]]);
+    // 진행 거리는 직전 위치 근처에서 이어서 잰다 (순환 코스에서 출발점=도착점이라 진행이 100%로 튀지 않게)
+    const p = followProgress(course.path, usable.lat, usable.lng, progress?.alongKm ?? 0);
+    setProgress(p);
+    const nextMax = Math.max(maxAlongKm, p.alongKm);
+    if (nextMax > maxAlongKm) {
+      setMaxAlongKm(nextMax);
+      // 응원 알림: 1km 통과(이번 1km 구간 페이스), 절반 통과, 도착 200m 전
+      const kmDone = Math.floor(nextMax);
+      if (kmDone > splitsMs.length && kmDone >= 1) {
+        const added = Array.from({ length: kmDone - splitsMs.length }, () => elapsedMs);
+        const prevAt = splitsMs[splitsMs.length - 1] ?? 0;
+        setSplitsMs([...splitsMs, ...added]);
+        setCheer({ key: `km${kmDone}`, emoji: "🏃", title: `${kmDone}km 통과!`, sub: `이번 1km ${formatPace((elapsedMs - prevAt) / 1000)}`, at: elapsedMs });
+      }
+      const half = p.totalKm / 2;
+      if (maxAlongKm < half && nextMax >= half) {
+        setCheer({ key: "half", emoji: "💪", title: "절반 왔어요!", sub: `남은 거리 ${formatDistanceKm(p.totalKm - nextMax)}, 이대로 쭉!`, at: elapsedMs });
+      }
+      if (p.totalKm > 0.5 && p.totalKm - maxAlongKm > 0.2 && p.totalKm - nextMax <= 0.2) {
+        setCheer({ key: "near", emoji: "🏁", title: "거의 다 왔어요!", sub: "도착까지 200m 남았어요", at: elapsedMs });
+      }
+    }
   }
-
-  const progress = useMemo(
-    () => (last ? followProgress(course.path, last.lat, last.lng) : null),
-    [course.path, last],
-  );
 
   // 위치 정확도가 나쁜 상태 (PLAN 14번): 그 점은 계산에서 빼고, 정확도가 좋아질 때까지 기록 확정을 보류한다
   const lowAccuracy = watched !== null && watched.accuracy > GPS_ACCURACY_LIMIT_M;
 
   // 완주 판정 (PLAN 15번): 도착 지점 30m 이내에 처음 들어오면 한 번 판정한다.
   // 정확도가 나쁜 동안에는 판정을 미룬다. (14번)
+  // 순환 코스는 출발하자마자 도착 지점 안에 있으므로, 코스를 절반 이상 지난 뒤부터 판정한다.
   const end = course.path[course.path.length - 1];
+  const loop = useMemo(() => isLoopCourse(course.path), [course.path]);
+  const finishArmed = !loop || (progress !== null && maxAlongKm >= progress.totalKm / 2);
   const atFinish =
     usable !== null &&
     distance(point([usable.lng, usable.lat]), point([end[1], end[0]]), { units: "meters" }) <= FINISH_RADIUS_M;
-  if (outcome.kind === "running" && atFinish && !lowAccuracy && usable && last === usable) {
+  if (outcome.kind === "running" && finishArmed && atFinish && !lowAccuracy && usable && last === usable) {
     const result = judgeCompletion(course.path, trace);
     setOutcome(
       result.accepted
@@ -171,6 +208,9 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
   const percent = Math.min(100, Math.round((alongKm / Math.max(totalKm, 0.001)) * 100));
   // 평균 페이스 (1km에 걸린 시간). 50m 이상 움직였을 때부터 보여 준다
   const paceSec = alongKm >= 0.05 ? elapsedMs / 1000 / alongKm : null;
+  // 최고 기록과 비교: 최고 기록 때 같은 지점에 도착했을 시간(같은 빠르기로 달렸다고 보고)과 지금 시간의 차이. 100m 지난 뒤부터
+  const gapSec = bestSec && alongKm >= 0.1 ? elapsedMs / 1000 - bestSec * (alongKm / Math.max(totalKm, 0.001)) : null;
+  const showCheer = cheer !== null && elapsedMs - cheer.at < CHEER_MS;
 
   // 반려: 코스를 잘 따르지 못한 이유를 알리고 저장하지 않는다
   if (outcome.kind === "rejected") {
@@ -243,7 +283,7 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
       </div>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-white/85 via-white/40 to-transparent" />
 
-      {/* 위: 나가기(포기) · 기록 중 표시 · 나침반 */}
+      {/* 위: 나가기(포기) · 나침반, 나침반 아래에 지도 출처(ⓘ) */}
       <div className="absolute inset-x-0 top-0 flex items-start justify-between px-4 pt-4">
         <button
           type="button"
@@ -255,17 +295,23 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
           </svg>
           나가기
         </button>
-        <div className="mt-1 flex flex-col items-center gap-1">
-          <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold shadow ring-1 ring-black/5">
-            <span className="rec-dot h-2 w-2 rounded-full bg-red-500" /> 기록 중
-          </span>
-          <span className="text-[11px] text-foreground/60">화면을 켜 두세요</span>
+        <div className="flex flex-col items-end gap-2">
+          <Compass heading={heading} />
+          <MapAttribution />
         </div>
-        <Compass heading={heading} />
       </div>
 
-      {/* 알림: 지도 위쪽에 차례로 띄운다 */}
-      <div className="absolute inset-x-4 top-[92px] flex flex-col gap-2" aria-live="polite">
+      {/* 알림: 지도 위쪽에 차례로 띄운다. 응원 알림(1km 통과 등)은 잠깐 보였다가 사라진다 */}
+      <div className="absolute inset-x-4 top-[112px] flex flex-col gap-2" aria-live="polite">
+        {showCheer && cheer && (
+          <div key={cheer.key} role="status" className="pop-in flex items-center gap-3 self-center rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-white shadow-lg shadow-emerald-600/30">
+            <span className="text-2xl" aria-hidden="true">{cheer.emoji}</span>
+            <div>
+              <p className="font-bold leading-tight">{cheer.title}</p>
+              <p className="text-xs opacity-90">{cheer.sub}</p>
+            </div>
+          </div>
+        )}
         {alerts.map((a) => (
           <div
             key={a.key}
@@ -288,7 +334,13 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
 
       {/* 아래: 운동 정보 */}
       <section aria-label="운동 정보" className="sheet-up absolute inset-x-0 bottom-0 px-3 pb-5">
-        <MapAttribution />
+        {/* 기록 중 표시: 운동 정보 카드 바로 위 가운데 */}
+        <div className="mb-2 flex justify-center">
+          <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold shadow ring-1 ring-black/5 backdrop-blur">
+            <span className="rec-dot h-2 w-2 rounded-full bg-red-500" /> 기록 중
+            <span className="font-normal text-foreground/50">· 화면을 켜 두세요</span>
+          </span>
+        </div>
         <div className="rounded-3xl bg-white/95 p-4 shadow-[0_-4px_24px_rgb(0_0_0/0.12)] ring-1 ring-black/5 backdrop-blur">
           <div className="flex items-end justify-between">
             <div>
@@ -298,7 +350,22 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
                 <span className="ml-1 text-xl font-bold text-emerald-600/70">km</span>
               </p>
             </div>
-            <p className="max-w-[45%] truncate text-right text-xs text-foreground/50">{course.name}</p>
+            <div className="flex max-w-[55%] flex-col items-end gap-1">
+              <p className="max-w-full truncate text-right text-xs text-foreground/50">{course.name}</p>
+              {/* 최고 기록과 비교 */}
+              {gapSec !== null ? (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                    Math.abs(gapSec) < 3 ? "bg-slate-100 text-slate-600" : gapSec < 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                  }`}
+                  data-testid="best-gap"
+                >
+                  {Math.abs(gapSec) < 3 ? "🏅 최고 기록과 비슷해요" : `🏅 최고 기록보다 ${formatGap(gapSec)} ${gapSec < 0 ? "빨라요" : "느려요"}`}
+                </span>
+              ) : (
+                !bestSec && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">첫 완주 도전 중</span>
+              )}
+            </div>
           </div>
 
           {/* 진행 막대: 지나온 만큼 채워지고 끝에 달리는 점이 있다 */}
@@ -331,7 +398,7 @@ export default function RunView({ course, scenario }: { course: RunCourse; scena
               <dd className="text-lg font-bold">{paceSec ? formatPace(paceSec) : "-"}</dd>
             </div>
           </dl>
-          {isDemo && <p className="mt-2 text-center text-[11px] font-medium text-emerald-600">시연용 가짜 위치로 달리는 중이에요</p>}
+          {isDemo && <p className="mt-2 text-center text-[11px] font-medium text-emerald-600">시연용 코스 주행 중이에요.</p>}
         </div>
       </section>
 
