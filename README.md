@@ -1,11 +1,44 @@
-# 마이로드 (My Road)
+<p align="center">
+  <img src="docs/images/logo-banner.svg" alt="마이로드 로고" width="560">
+</p>
 
-러닝·사이클링·걷기 코스를 **기록해 저장**하고, **날씨 확인 → GPS로 코스 따라가기 → 완주 자동 기록 → 공유**까지 한곳에서 하는 모바일 웹앱입니다.
+<p align="center">
+  러닝·사이클링·걷기 코스를 <b>기록해 저장</b>하고,<br>
+  <b>날씨 확인 → GPS로 코스 따라가기 → 완주 자동 기록 → 공유</b>까지 한곳에서 하는 모바일 웹앱
+</p>
+
+<p align="center">
+  <a href="https://my-road-daejeon.vercel.app"><b>▶ 배포 사이트 열기</b></a>
+  &nbsp;·&nbsp;
+  <a href="PRD.md">기획서(PRD)</a>
+  &nbsp;·&nbsp;
+  <a href="PLAN.md">개발 계획서(PLAN)</a>
+  &nbsp;·&nbsp;
+  <a href="DESIGN.md">화면·데이터 설계</a>
+</p>
+
 대전에서 운동을 계획적으로 관리하는 사람을 위해 만든 첫 버전(MVP)입니다.
 
 - **배포 주소:** https://my-road-daejeon.vercel.app
 - **GitHub 저장소:** https://github.com/Sernn0/my-road
-- **기획 문서:** [PRD.md](PRD.md) (서비스 기획서) · [PLAN.md](PLAN.md) (개발 계획서) · [DESIGN.md](DESIGN.md) (화면·데이터 설계)
+
+## 화면 미리보기
+
+휴대폰 화면 기준으로 만든 앱입니다. 아래는 배포된 사이트에서 시연 모드로 찍은 실제 화면입니다.
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/images/01-login.png" alt="첫 화면" width="200"><br><b>① 첫 화면</b><br>테스트 계정 선택</td>
+    <td align="center" width="25%"><img src="docs/images/02-main.png" alt="메인 화면" width="200"><br><b>② 메인 화면</b><br>대전 날씨와 내 코스</td>
+    <td align="center" width="25%"><img src="docs/images/03-course.png" alt="출발 전 화면" width="200"><br><b>③ 출발 전 확인</b><br>경로·거리·내 기록</td>
+    <td align="center" width="25%"><img src="docs/images/04-run.png" alt="운동 중 화면" width="200"><br><b>④ 운동 중</b><br>코스 따라가기</td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/images/05-done.png" alt="완주 화면" width="200"><br><b>⑤ 완주</b><br>경험치와 기록</td>
+    <td align="center" width="25%"><img src="docs/images/06-share-preview.png" alt="기록 이미지 미리보기" width="200"><br><b>⑥ 기록 이미지 미리보기</b><br>저장·친구에게 공유</td>
+    <td align="center" colspan="2"><img src="docs/images/07-photocard.png" alt="포토카드 기록 이미지" width="200"><br><b>⑦ 만들어지는 포토카드 이미지</b><br>코스 모양·기록·프로필</td>
+  </tr>
+</table>
 
 ## 왜 만들었나요?
 
