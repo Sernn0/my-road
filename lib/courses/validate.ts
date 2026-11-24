@@ -3,7 +3,9 @@ import { routeLengthKm } from "@/lib/geo/route";
 // 코스 저장 기준 (DESIGN.md 4번): 위치 점 2개 이상, 거리 0.1km 이상
 export const MIN_COURSE_POINTS = 2;
 export const MIN_COURSE_DISTANCE_KM = 0.1;
-export const MAX_COURSE_POINTS = 20000;
+export const MAX_COURSE_POINTS = 5000; // 2초에 한 점씩 받아도 2시간 40분 분량. 너무 큰 요청으로 DB를 채우는 것을 막는다
+export const MAX_COURSE_DISTANCE_KM = 100; // 이보다 긴 코스는 받지 않는다 (가짜로 아주 긴 코스를 만들어 경험치를 부풀리는 것 방지)
+export const MAX_COURSES_PER_USER = 50; // 계정당 저장할 수 있는 코스 수
 export const MAX_NAME_LENGTH = 40;
 export const TOO_SHORT_MESSAGE = "코스가 너무 짧아 저장할 수 없습니다";
 
@@ -37,6 +39,9 @@ export function validateCourseInput(body: unknown): ValidationResult {
   const distanceKm = Math.round(routeLengthKm(b.path) * 1000) / 1000;
   if (b.path.length < MIN_COURSE_POINTS || distanceKm < MIN_COURSE_DISTANCE_KM) {
     return { ok: false, code: "TOO_SHORT", message: TOO_SHORT_MESSAGE };
+  }
+  if (distanceKm > MAX_COURSE_DISTANCE_KM) {
+    return { ok: false, code: "TOO_LONG", message: `코스는 ${MAX_COURSE_DISTANCE_KM}km까지 저장할 수 있어요` };
   }
   return { ok: true, name, path: b.path, distanceKm };
 }

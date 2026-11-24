@@ -1,0 +1,6 @@
+# Vercel에 올리지 않을 파일 (배포 소스에 비밀 값과 작업 기록이 섞이지 않게)
+# 앱 설정 값(SUPABASE_URL 등)은 Vercel 프로젝트의 환경변수로만 등록한다
+.env*
+.bkit/
+.claude/
+trash-can/

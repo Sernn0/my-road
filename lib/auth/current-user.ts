@@ -48,7 +48,8 @@ export const USER_COLUMNS = "id, nickname, total_xp, streak_count, last_goal_dat
 // 로그인한 사용자. 로그인하지 않았거나 계정이 없으면 null.
 export async function getCurrentUser(): Promise<UserProfile | null> {
   const id = (await cookies()).get(USER_COOKIE)?.value;
-  if (!id || !UUID.test(id)) return null;
+  // 테스트 계정 3개만 인정한다 (쿠키를 직접 고쳐 다른 계정 번호를 넣어도 로그인되지 않게)
+  if (!id || !UUID.test(id) || !TEST_ACCOUNT_IDS.includes(id)) return null;
   const { data } = await createServerSupabase().from("users").select(USER_COLUMNS).eq("id", id).maybeSingle();
   return data ? toProfile(data as UserRow) : null;
 }

@@ -51,7 +51,7 @@ async function Profile() {
           </span>
         </div>
         <p className="mt-2 text-sm text-foreground/60">
-          하루(한국 시간)에 완주를 1번 이상 하면 이어져요. 하루라도 거르면 0부터 다시 세요.
+          하루(한국 시간)에 완주를 1번 이상 하면 이어져요. 하루라도 거르면 0부터 다시 세요. (시연용 테스트 계정은 시연을 위해 끊기지 않게 해 두었어요)
         </p>
       </section>
 

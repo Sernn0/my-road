@@ -15,13 +15,15 @@ async function RunScreen({
 }) {
   const { id } = await params;
   const { scenario } = await searchParams; // 시연 모드 시험용: ?scenario=shortcut
-  const course = await getCourse(id);
+  // 운동 기록은 로그인한 사람만 저장할 수 있으므로, 로그인하지 않았으면 먼저 로그인 화면으로 보낸다
+  const userId = await getCurrentUserId();
+  if (!userId) redirect("/login");
+  const course = await getCourse(id, userId);
   if (!course) notFound();
   // 지금 고를 수 없는 코스(순환 코스 임시 비활성화)는 운동을 시작하지 않고 운동 준비 화면으로 돌려보낸다
   if (course.disabled) redirect(`/courses/${course.id}`);
   // 이 코스의 내 최고 기록 (운동 중 "최고 기록보다 몇 초 빠른지" 비교에 쓴다)
-  const userId = await getCurrentUserId();
-  const record = userId ? await getCourseRecord(course.id, userId) : null;
+  const record = await getCourseRecord(course.id, userId);
 
   // 뒤로 가기 머리줄 없이 화면 전체를 지도로 쓴다. 나가기(포기)는 운동 화면 안의 버튼으로 한다.
   return (

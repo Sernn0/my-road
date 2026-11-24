@@ -18,10 +18,10 @@ import { kstDate, nextStreak } from "@/lib/progress/streak";
 // 날씨는 메인 화면에서 보여 주므로 여기에는 두지 않는다. 공유는 메인 화면 코스 카드의 ⋯ 메뉴에서 한다.
 async function CourseDetail({ params }: { params: PageProps<"/courses/[id]">["params"] }) {
   const { id } = await params;
-  const course = await getCourse(id);
+  const user = await getCurrentUser();
+  const course = await getCourse(id, user?.id ?? null);
   if (!course) notFound();
 
-  const user = await getCurrentUser();
   const record = user ? await getCourseRecord(course.id, user.id) : null;
   // 완주하면 받을 경험치: 완주 저장 API와 같은 계산 (같은 코스는 하루 1번만, 연속 일수 배율 적용)
   const today = kstDate();

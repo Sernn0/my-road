@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { playPositions, shortcutPath, simulatePositions, type LatLng } from "@/lib/demo/simulator";
-import { IS_DEMO } from "./config";
+import { DEMO_SPEEDUP, IS_DEMO } from "./config";
 
 export type WatchedPosition = { lat: number; lng: number; accuracy: number; timestamp: number };
 
@@ -26,7 +26,7 @@ export function useWatchPosition(enabled: boolean, demoPath: LatLng[], scenario?
       if (scenario === "lowaccuracy") {
         fake = fake.map((p, i) => (i >= 40 && i < 120 ? { ...p, accuracy: 80 } : p));
       }
-      return playPositions(fake, (p) => setPosition(p), { speedUp: 30 });
+      return playPositions(fake, (p) => setPosition(p), { speedUp: DEMO_SPEEDUP });
     }
 
     if (!("geolocation" in navigator)) return;
@@ -39,7 +39,7 @@ export function useWatchPosition(enabled: boolean, demoPath: LatLng[], scenario?
           timestamp: p.timestamp,
         }),
       () => {
-        // 위치를 못 받는 경우의 알림은 PLAN 13번에서 추가한다
+        // 위치를 못 받으면 새 위치가 오지 않으므로, 운동 화면이 15초 뒤 "기록이 끊겼습니다"로 알린다 (RunView)
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     );

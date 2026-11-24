@@ -8,6 +8,8 @@ import { createServerSupabase } from "@/lib/supabase/server";
 // 요청: { courseId, durationSec } / 응답: 성공 { data: { id, xp, streak } }, 실패 { error: { code, message } }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const MIN_SEC_PER_KM = 60;
+
 function fail(status: number, code: string, message: string) {
   return Response.json({ error: { code, message } }, { status });
 }
@@ -36,10 +38,14 @@ export async function POST(request: Request) {
     .from("courses")
     .select("distance_km")
     .eq("id", courseId)
-    .or(`user_id.eq.${user.id},is_demo.eq.true`) // 내 코스 또는 시연용 샘플 코스
+    .or(`user_id.eq.${user.id},is_demo.eq.true,share_code.not.is.null`) // 내 코스, 시연용 샘플 코스, 또는 공유 링크로 받은 코스
     .maybeSingle();
   if (courseError) return fail(500, "SAVE_FAILED", "완주 기록을 저장하지 못했습니다");
   if (!course) return fail(404, "NOT_FOUND", "코스를 찾을 수 없습니다");
+  // 1km를 1분보다 빨리 지난 기록은 받지 않는다 (시속 60km 초과. 자전거도 넘기 어려운 속도라 조작된 값으로 본다)
+  if (durationSec < Number(course.distance_km) * MIN_SEC_PER_KM) {
+    return fail(400, "TOO_FAST", "소요 시간이 너무 짧아 기록할 수 없습니다");
+  }
 
   // 연속 달성: 한국 시간 오늘 기준 (자정을 넘겨 끝난 운동은 완주를 마친 시각의 날짜로 센다)
   const today = kstDate();

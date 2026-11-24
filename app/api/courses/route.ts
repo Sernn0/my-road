@@ -1,4 +1,4 @@
-import { validateCourseInput } from "@/lib/courses/validate";
+import { MAX_COURSES_PER_USER, validateCourseInput } from "@/lib/courses/validate";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -20,8 +20,15 @@ export async function POST(request: Request) {
     return Response.json({ error: { code: result.code, message: result.message } }, { status: 400 });
   }
 
+  const supabase = createServerSupabase();
+  // 계정당 코스 수 제한 (요청을 반복해 DB를 채우는 것을 막는다)
+  const { count } = await supabase.from("courses").select("id", { count: "exact", head: true }).eq("user_id", userId);
+  if ((count ?? 0) >= MAX_COURSES_PER_USER) {
+    return Response.json({ error: { code: "TOO_MANY", message: `코스는 ${MAX_COURSES_PER_USER}개까지 저장할 수 있어요` } }, { status: 409 });
+  }
+
   const start = result.path[0];
-  const { data, error } = await createServerSupabase()
+  const { data, error } = await supabase
     .from("courses")
     .insert({
       user_id: userId,

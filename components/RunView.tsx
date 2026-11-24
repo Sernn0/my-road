@@ -10,7 +10,7 @@ import MapAttribution from "@/components/MapAttribution";
 import { FINISH_RADIUS_M, judgeCompletion } from "@/lib/geo/completion";
 import { followProgress, isLoopCourse, routeBearingAt, type FollowProgress } from "@/lib/geo/follow";
 import { formatDistanceKm, formatGap, formatPace } from "@/lib/format";
-import { GPS_ACCURACY_LIMIT_M } from "@/lib/location/config";
+import { DEMO_SPEEDUP, GPS_ACCURACY_LIMIT_M, IS_DEMO } from "@/lib/location/config";
 import { useCurrentLocation } from "@/lib/location/useCurrentLocation";
 import { useWatchPosition } from "@/lib/location/useWatchPosition";
 
@@ -20,8 +20,12 @@ const START_TOLERANCE_M = 50;
 const OFF_ROUTE_M = 50;
 // 이 시간(ms) 동안 위치가 들어오지 않으면 "기록이 끊겼습니다"를 알린다. (PRD 5번)
 const LOST_AFTER_MS = 15000;
-// 1km 통과·중간 응원 알림을 보여 주는 시간(ms)
+// 1km 통과·중간 응원 알림을 보여 주는 시간(ms, 실제 시간)
 const CHEER_MS = 4000;
+// 위치가 다시 들어와도 "기록이 끊겼습니다"를 이 시간(ms) 동안 더 보여 준다 (화면을 다시 켰을 때 놓치지 않게)
+const LOST_NOTICE_MS = 5000;
+// 시연 모드는 가짜 위치를 배속 재생하므로 소요 시간도 같은 배속으로 센다
+const TIME_SCALE = IS_DEMO ? DEMO_SPEEDUP : 1;
 
 // 운동 중 응원 알림 (1km 통과, 절반, 거의 도착)
 type Cheer = { key: string; emoji: string; title: string; sub: string; at: number };
@@ -63,32 +67,36 @@ export default function RunView({
   scenario?: string;
 }) {
   const router = useRouter();
-  const [elapsedMs, setElapsedMs] = useState(0);
+  const [realMs, setRealMs] = useState(0); // 화면이 열린 뒤 흐른 실제 시간
+  const elapsedMs = realMs * TIME_SCALE; // 소요 시간 (시연 모드는 배속 적용)
   const [giveUpAsk, setGiveUpAsk] = useState(false); // 운동 포기 확인 중
 
-  // 시간 기록: 화면이 열린 순간부터 1초마다 갱신
+  // 시간 기록: 화면이 열린 순간부터 갱신 (시연 모드는 배속이라 더 자주 갱신한다)
   useEffect(() => {
     const startedAt = Date.now();
-    const timer = setInterval(() => setElapsedMs(Date.now() - startedAt), 1000);
+    const timer = setInterval(() => setRealMs(Date.now() - startedAt), IS_DEMO ? 100 : 1000);
     return () => clearInterval(timer);
   }, []);
 
   // 첫 위치 확인 (시연 모드에서는 이 코스의 시작점을 첫 위치로 쓴다)
   const [demoStart] = useState({ lat: course.startLat, lng: course.startLng, accuracy: 10 });
   const { status, position: first, isDemo, retry } = useCurrentLocation(demoStart);
+  // 첫 위치가 정확할 때(50m 이내)만 시작점과 비교한다. GPS가 처음에 흐리면 잘못 알릴 수 있어서다
   const offStart =
     first !== null &&
+    first.accuracy <= GPS_ACCURACY_LIMIT_M &&
     distance(point([first.lng, first.lat]), point([course.startLng, course.startLat]), {
       units: "meters",
     }) > START_TOLERANCE_M;
+  const [reachedStart, setReachedStart] = useState(false); // 시작점 50m 안에 들어온 적이 있는지 (들어오면 시작점 경고를 지운다)
+  const [outcome, setOutcome] = useState<Outcome>({ kind: "running" });
 
-  // 위치 권한이 허용된 뒤부터 위치를 계속 받는다
-  const watched = useWatchPosition(status === "granted", course.path, scenario);
+  // 위치 권한이 허용된 뒤부터 위치를 계속 받는다. 완주·반려가 정해지면 바로 멈춘다 (PRD 7번: 운동이 끝나면 수집을 멈춘다)
+  const watched = useWatchPosition(status === "granted" && outcome.kind === "running", course.path, scenario);
   // 정확도가 50m보다 나쁜 위치는 계산에 쓰지 않는다 (PRD 5번)
   const usable = watched && watched.accuracy <= GPS_ACCURACY_LIMIT_M ? watched : null;
   const [last, setLast] = useState<typeof usable>(null);
   const [trace, setTrace] = useState<[number, number][]>([]); // 지나온 위치 (기기 안에서만 사용)
-  const [outcome, setOutcome] = useState<Outcome>({ kind: "running" });
   const [progress, setProgress] = useState<FollowProgress | null>(null);
   const [maxAlongKm, setMaxAlongKm] = useState(0); // 지금까지 코스 위에서 가장 멀리 간 거리 (되돌아가도 줄지 않는다)
   const [splitsMs, setSplitsMs] = useState<number[]>([]); // 1km씩 통과한 순간의 소요 시간
@@ -96,6 +104,9 @@ export default function RunView({
   if (usable && usable !== last) {
     setLast(usable);
     setTrace((t) => [...t, [usable.lat, usable.lng]]);
+    if (!reachedStart && distance(point([usable.lng, usable.lat]), point([course.startLng, course.startLat]), { units: "meters" }) <= START_TOLERANCE_M) {
+      setReachedStart(true);
+    }
     // 진행 거리는 직전 위치 근처에서 이어서 잰다 (순환 코스에서 출발점=도착점이라 진행이 100%로 튀지 않게)
     const p = followProgress(course.path, usable.lat, usable.lng, progress?.alongKm ?? 0);
     setProgress(p);
@@ -108,14 +119,14 @@ export default function RunView({
         const added = Array.from({ length: kmDone - splitsMs.length }, () => elapsedMs);
         const prevAt = splitsMs[splitsMs.length - 1] ?? 0;
         setSplitsMs([...splitsMs, ...added]);
-        setCheer({ key: `km${kmDone}`, emoji: "🏃", title: `${kmDone}km 통과!`, sub: `이번 1km ${formatPace((elapsedMs - prevAt) / 1000)}`, at: elapsedMs });
+        setCheer({ key: `km${kmDone}`, emoji: "🏃", title: `${kmDone}km 통과!`, sub: `이번 1km ${formatPace((elapsedMs - prevAt) / 1000)}`, at: realMs });
       }
       const half = p.totalKm / 2;
       if (maxAlongKm < half && nextMax >= half) {
-        setCheer({ key: "half", emoji: "💪", title: "절반 왔어요!", sub: `남은 거리 ${formatDistanceKm(p.totalKm - nextMax)}, 이대로 쭉!`, at: elapsedMs });
+        setCheer({ key: "half", emoji: "💪", title: "절반 왔어요!", sub: `남은 거리 ${formatDistanceKm(p.totalKm - nextMax)}, 이대로 쭉!`, at: realMs });
       }
       if (p.totalKm > 0.5 && p.totalKm - maxAlongKm > 0.2 && p.totalKm - nextMax <= 0.2) {
-        setCheer({ key: "near", emoji: "🏁", title: "거의 다 왔어요!", sub: "도착까지 200m 남았어요", at: elapsedMs });
+        setCheer({ key: "near", emoji: "🏁", title: "거의 다 왔어요!", sub: "도착까지 200m 남았어요", at: realMs });
       }
     }
   }
@@ -176,7 +187,12 @@ export default function RunView({
   useEffect(() => {
     if (status !== "granted") return;
     lastReceivedAt.current = Date.now();
-    const timer = setInterval(() => setLost(Date.now() - lastReceivedAt.current > LOST_AFTER_MS), 1000);
+    const lostUntil = { current: 0 }; // 끊김 알림을 이 시각까지 보여 준다
+    const timer = setInterval(() => {
+      const now = Date.now();
+      if (now - lastReceivedAt.current > LOST_AFTER_MS) lostUntil.current = now + LOST_NOTICE_MS;
+      setLost(now < lostUntil.current);
+    }, 1000);
     return () => clearInterval(timer);
   }, [status]);
 
@@ -210,7 +226,7 @@ export default function RunView({
   const paceSec = alongKm >= 0.05 ? elapsedMs / 1000 / alongKm : null;
   // 최고 기록과 비교: 최고 기록 때 같은 지점에 도착했을 시간(같은 빠르기로 달렸다고 보고)과 지금 시간의 차이. 100m 지난 뒤부터
   const gapSec = bestSec && alongKm >= 0.1 ? elapsedMs / 1000 - bestSec * (alongKm / Math.max(totalKm, 0.001)) : null;
-  const showCheer = cheer !== null && elapsedMs - cheer.at < CHEER_MS;
+  const showCheer = cheer !== null && realMs - cheer.at < CHEER_MS;
 
   // 반려: 코스를 잘 따르지 못한 이유를 알리고 저장하지 않는다
   if (outcome.kind === "rejected") {
@@ -259,7 +275,7 @@ export default function RunView({
   if (status === "denied") alerts.push({ key: "denied", tone: "red", title: "위치 권한을 허용해 주세요" });
   if (status === "unavailable" || status === "timeout" || status === "unsupported")
     alerts.push({ key: "nopos", tone: "amber", title: "현재 위치를 알 수 없어요" });
-  if (status === "granted" && offStart)
+  if (status === "granted" && offStart && !reachedStart)
     alerts.push({ key: "start", tone: "red", title: "코스를 이탈했습니다", sub: `코스 시작점에서 ${START_TOLERANCE_M}m 넘게 떨어져 있어요` });
   if (offRoute && progress)
     alerts.push({ key: "off", tone: "red", title: "코스에서 벗어났어요", sub: `코스까지 약 ${Math.round(progress.offRouteM)}m` });

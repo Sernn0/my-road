@@ -42,13 +42,16 @@ export type CourseDetail = Course & {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// 코스 한 개 (경로 포함). 없거나 번호 형식이 틀리면 null.
-export async function getCourse(id: string): Promise<CourseDetail | null> {
-  if (!UUID.test(id)) return null;
+// 코스 한 개 (경로 포함). 볼 수 있는 코스만 돌려준다: 내 코스, 시연용 샘플 코스, 주인이 공유한 코스(공유 코드가 있음).
+// 공유하지 않은 남의 코스는 번호를 알아도 보이지 않는다. 없거나 번호 형식이 틀리면 null.
+export async function getCourse(id: string, userId: string | null): Promise<CourseDetail | null> {
+  if (!UUID.test(id) || (userId !== null && !UUID.test(userId))) return null;
+  const visible = userId ? `user_id.eq.${userId},is_demo.eq.true,share_code.not.is.null` : "is_demo.eq.true,share_code.not.is.null";
   const { data, error } = await createServerSupabase()
     .from("courses")
     .select("id, name, distance_km, path, start_lat, start_lng, is_demo")
     .eq("id", id)
+    .or(visible)
     .maybeSingle();
   if (error) throw new Error("코스를 불러오지 못했습니다");
   if (!data) return null;
