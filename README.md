@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 마이로드 (My Road)
 
-## Getting Started
+러닝·사이클링·걷기 코스를 **기록해 저장**하고, **날씨 확인 → GPS로 코스 따라가기 → 완주 자동 기록 → 공유**까지 한곳에서 하는 모바일 웹앱입니다.
+대전에서 운동을 계획적으로 관리하는 사람을 위해 만든 첫 버전(MVP)입니다.
 
-First, run the development server:
+- **배포 주소:** (배포 후 추가)
+- **기획 문서:** [PRD.md](PRD.md) (서비스 기획서) · [PLAN.md](PLAN.md) (개발 계획서) · [DESIGN.md](DESIGN.md) (화면·데이터 설계)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 왜 만들었나요?
+
+좋아하는 코스는 지도 앱·메모·메신저에 흩어져 있고, 출발 전에는 날씨 앱을, 운동 중에는 기록 앱을 따로 켜야 합니다. 운동이 끝나면 기록을 직접 정리해 공유해야 하고요.
+마이로드는 이 과정을 앱 하나로 묶었습니다.
+
+## 주요 기능
+
+### 꼭 필요한 기능 (must)
+1. **코스 기록·저장과 출발 전 확인**
+   - "코스 기록하기"로 지금 위치부터 경로를 기록하고, 이름을 붙여 저장합니다.
+   - 메인 화면에서 대전의 지금 날씨(기상청 관측, 10분 이내 값만)를 보여 줍니다.
+   - 코스를 고르면 지도로 경로·거리와 이 코스의 내 기록, 완주하면 받을 경험치를 확인합니다.
+2. **GPS 코스 따라가기와 완주 자동 기록**
+   - 지도가 내가 가는 방향대로 돌고, 남은 거리·진행률·소요 시간·평균 페이스를 보여 줍니다.
+   - 코스에서 50m 넘게 벗어나거나, 기록이 끊기거나, GPS 정확도가 낮으면 알려 줍니다.
+   - **도착 지점 30m 이내 + 이동 거리 80% 이상 + 코스 모양 유사도 85% 이상**이면 완주로 자동 저장합니다. 지름길로 가면 이유와 함께 반려합니다.
+
+### 여유가 있을 때 만든 기능 (nice)
+- **경험치·레벨(5단계)·연속 달성(streak)**: 코스 길이에 비례한 경험치, 연속 일수에 따른 배율
+- **공유**: 코스 링크·6자리 공유 코드(시작 위치 경고 포함), 포토카드 모양 완주 기록 이미지(미리보기 → 기기에 저장 / 친구에게 공유)
+- **더미 로그인**: 회원가입 없이 테스트 계정 3개 중 하나를 골라 시작
+
+## 시연하는 법
+
+배포 버전은 **시연 모드**로 동작합니다. 실제로 걷지 않아도 가짜 위치가 코스를 따라 30배속으로 움직입니다.
+
+1. 첫 화면에서 테스트 계정(테스트 러너 / 러닝 새싹 / 로드 마스터 체험) 하나를 고릅니다.
+2. 메인 화면의 "[시연]" 코스 하나를 누르고 "운동 시작"을 누릅니다.
+3. 1km 통과·절반·도착 직전 알림을 보며 완주하면 완주 화면과 경험치가 나옵니다.
+4. "기록 이미지 생성"으로 포토카드를 만들어 봅니다.
+
+> 보라매공원 순환 코스는 완주 판정을 점검하는 동안 임시로 고를 수 없게 해 두었습니다.
+
+## 기술 스택
+
+| 구분 | 사용한 것 |
+|---|---|
+| 화면·서버 | Next.js 16 (App Router, TypeScript, Tailwind CSS) |
+| 데이터 저장 | Supabase (서버에서만 접근, RLS 사용) |
+| 지도 | MapLibre GL + OpenFreeMap (OpenStreetMap 기반, 키 없음) |
+| 날씨 | 기상청 API허브 AWS 매분자료 (대전 133번 지점) |
+| 배포 | Vercel (서버 지역: 서울 icn1) |
+
+## 폴더 구조
+
+```
+app/            화면(page.tsx)과 서버 API(app/api)
+components/     화면 부품 (지도, 운동 화면, 날씨 그림, 코스 카드 등)
+lib/            계산과 데이터 (완주 판정, 진행 거리, 날씨, 경험치·레벨, 시연용 가짜 위치)
+supabase/       데이터베이스 표 만들기(migrations)와 시연 데이터(seed)
+public/         그림과 지도 계산용 파일
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 내 컴퓨터에서 실행하기
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev     # http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env.local`(또는 `.env`)에 아래 이름의 값이 필요합니다. 값은 저장소에 올리지 않습니다.
 
-## Learn More
+| 이름 | 용도 |
+|---|---|
+| `SUPABASE_URL` | Supabase 주소 (서버 전용) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 서버 키 (서버 전용) |
+| `KMA_API_KEY` | 기상청 API허브 키 (서버 전용) |
+| `NEXT_PUBLIC_DEMO_MODE` | `true`면 시연 모드 (비밀 값 아님) |
 
-To learn more about Next.js, take a look at the following resources:
+## 보안·개인정보
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 비밀 키는 서버 코드에서만 읽고, 브라우저로 보내지 않습니다. `.env` 파일은 저장소와 배포 소스에서 빠집니다.
+- 운동 중의 실시간 GPS 위치와 이동 궤적은 **서버에 저장하지 않습니다.** 서버에는 코스와 완주 요약(코스, 날짜, 소요 시간, 거리)만 보냅니다.
+- 계정은 테스트용 가짜 데이터만 씁니다. 실제 이름·이메일·비밀번호를 받지 않습니다.
+- 코스 크기·개수 제한, 너무 빠른 완주 기록 거절, 공유한 코스만 보기, 기본 보안 헤더를 적용했습니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 남은 일
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 실제 휴대폰 GPS로 걸어 보며 남은 거리 오차·끊김 알림 확인
+- 순환 코스 완주 판정 점검 후 다시 열기
+- 위험 정보(공사·통제·폭염·침수) 제공은 다음 버전 과제
